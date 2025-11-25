@@ -1,3 +1,6 @@
+use crate::dns::packet::question::qclass::DNSClass;
+
+#[derive(Debug)]
 pub enum DNSRecordType{
     A,
     AAAA,
@@ -46,4 +49,12 @@ pub enum DNSRecordType{
     TXT,
     URI,
     ZONEMD
+}
+
+pub struct ResourceRecord {
+    pub name: String,
+    pub rr_type: DNSRecordType,
+    pub class: DNSClass,
+    pub ttl: u32,
+    pub rdata: Vec<u8>,
 }
