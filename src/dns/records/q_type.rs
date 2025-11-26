@@ -2,7 +2,6 @@
 
 use std::convert::TryFrom;
 use crate::exceptions::SCloudException;
-use crate::SCloudException; // ton type d'erreur personnalisé
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DNSRecordType {
@@ -173,9 +172,12 @@ impl TryFrom<DNSRecordType> for u16 {
     }
 }
 
-impl From<&[u8; 2]> for DNSRecordType {
-    fn from(bytes: &[u8; 2]) -> Self {
+impl TryFrom<&[u8; 2]> for DNSRecordType {
+    type Error = SCloudException;
+
+    fn try_from(bytes: &[u8; 2]) -> Result<Self, Self::Error> {
         let v = u16::from_be_bytes(*bytes);
-        DNSRecordType::from(v)
+        DNSRecordType::try_from(v)
     }
 }
+
