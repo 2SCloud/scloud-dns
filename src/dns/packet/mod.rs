@@ -3,6 +3,7 @@ use crate::dns::packet::answer::AnswerSection;
 use crate::dns::packet::authority::AuthoritySection;
 use crate::dns::packet::header::Header;
 use crate::dns::packet::question::QuestionSection;
+use crate::exceptions::SCloudException;
 use crate::utils::ErrorCondition;
 
 pub mod header;
@@ -13,50 +14,44 @@ mod authority;
 
 pub struct DNSPacket {
     pub header: Header,
-    pub question_section: QuestionSection,
-    pub answer_section: AnswerSection,
-    pub authority_section: AuthoritySection,
-    pub additional_section: AdditionalSection
+    pub questions: Vec<QuestionSection>,
+    pub answers: Vec<AnswerSection>,
+    pub authorities: Vec<AuthoritySection>,
+    pub additionals: Vec<AdditionalSection>,
 }
 
 impl DNSPacket {
-    const DNS_PACKET_LEN: usize = 12;
+    const DNS_HEADER_LEN: usize = 12;
 
-    /// Serialize the DNS packet into a byte array
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(Self::DNS_PACKET_LEN);
+    pub fn from_bytes(buf: &[u8]) -> Result<DNSPacket, SCloudException> {
+        let mut pos = 0;
 
-        buf.extend_from_slice(&self.id.to_be_bytes());
-        buf.push(
-            (self.qr as u8) << 7
-                | self.opcode << 3
-                | (self.aa as u8) << 2
-                | (self.tc as u8) << 1
-                | self.rd as u8,
-        );
-        buf.push((self.ra as u8) << 7 | self.z << 4 | self.rcode);
-        buf.extend_from_slice(&self.qdcount.to_be_bytes());
-        buf.extend_from_slice(&self.ancount.to_be_bytes());
-        buf.extend_from_slice(&self.nscount.to_be_bytes());
-        buf.extend_from_slice(&self.arcount.to_be_bytes());
+        let header = Header::from_bytes(&buf[pos..])?;
+        pos += Header::DNS_HEADER_LEN;
 
-        buf
-    }
+        let (question_section, consumed_q) =
+            QuestionSection::from_bytes(&buf[pos..])?;
+        pos += consumed_q;
 
-    /// Deserialize the DNS packet from a byte array
-    pub fn from_bytes(buf: &[u8]) -> Result<DNSPacket, ErrorCondition> {
-        if buf.len() < Self::DNS_PACKET_LEN {
-            return Err(ErrorCondition::DeserializationErr(
-                "Buffer length is less than header length".to_string(),
-            ));
-        }
+        let (answer_section, consumed_a) =
+            AnswerSection::from_bytes(&buf[pos..])?;
+        pos += consumed_a;
+
+        let (authority_section, consumed_ns) =
+            AuthoritySection::from_bytes(&buf[pos..])?;
+        pos += consumed_ns;
+
+        let (additional_section, consumed_add) =
+            AdditionalSection::from_bytes(&buf[pos..])?;
+        pos += consumed_add;
+
 
         Ok(DNSPacket {
-            header: Header::from_bytes(buf)?,
-            question_section: QuestionSection::from_bytes(buf)?,
-            answer_section: (),
-            authority_section: (),
-            additional_section: (),
+            header,
+            question_section,
+            answer_section,
+            authority_section,
+            additional_section
         })
     }
 }

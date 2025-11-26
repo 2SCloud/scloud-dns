@@ -1,4 +1,5 @@
-use crate::utils::ErrorCondition;
+use crate::exceptions::SCloudException;
+use crate::exceptions::SCloudException::SCLOUD_HEADER_DESERIALIZATION_FAILED;
 
 #[derive(Debug)]
 pub struct Header {
@@ -18,7 +19,7 @@ pub struct Header {
 }
 
 impl Header {
-    const DNS_HEADER_LEN: usize = 12;
+    pub(crate) const DNS_HEADER_LEN: usize = 12;
 
     /// Serialize the DNS header into a byte array
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -42,11 +43,9 @@ impl Header {
     }
 
     /// Deserialize the DNS header from a byte array
-    pub fn from_bytes(buf: &[u8]) -> Result<Header, ErrorCondition> {
+    pub fn from_bytes(buf: &[u8]) -> Result<Header, SCloudException> {
         if buf.len() < Header::DNS_HEADER_LEN {
-            return Err(ErrorCondition::DeserializationErr(
-                "Buffer length is less than header length".to_string(),
-            ));
+            return Err(SCLOUD_HEADER_DESERIALIZATION_FAILED);
         }
 
         Ok(Header {

@@ -1,20 +1,30 @@
+#[derive(Debug)]
 pub(crate) enum SCloudException {
-    // question section
+    // HEADER SECTION
+    SCLOUD_HEADER_DESERIALIZATION_FAILED,
+    
+    // QUESTION SECTION
     SCLOUD_QUESTION_IMPOSSIBLE_PARSE_QNAME,
     SCLOUD_QUESTION_DESERIALIZATION_FAILED,
-    
+
     // QTYPE
     SCLOUD_QTYPE_UNKNOWN_TYPE
-    
+
     //QCLASS
 }
 
 impl SCloudException {
     fn to_str(&self) -> &'static str {
         match self {
+            //HEADER SECTION
+            SCloudException::SCLOUD_HEADER_DESERIALIZATION_FAILED => "Buffer length is less than header length",
+            
             // question section
             SCloudException::SCLOUD_QUESTION_IMPOSSIBLE_PARSE_QNAME => "Impossible to parse the `q_name`, check if a `q_name is provided.`",
             SCloudException::SCLOUD_QUESTION_DESERIALIZATION_FAILED => "Buffer length is less than question section length.",
+            
+            // QTYPE
+            SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE => "Unknown q_type",
         }
     }
 }
