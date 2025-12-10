@@ -1,4 +1,5 @@
 import json
+import re
 
 with open("coverage.json") as f:
     data = json.load(f)
@@ -38,7 +39,26 @@ for item in data["data"]:
 
 html_lines.append("</table>")
 
+coverage_md = "\n".join(html_lines)
+
 with open("COVERAGE.md", "w") as f:
-    f.write("\n".join(html_lines))
+    f.write(coverage_md)
 
 print("COVERAGE.md generated with full HTML heatmap table!")
+
+readme_file = "README.md"
+
+with open(readme_file, "r", encoding="utf-8") as f:
+    readme_content = f.read()
+
+new_readme = re.sub(
+    r"<!-- COVERAGE_START -->.*<!-- COVERAGE_END -->",
+    f"<!-- COVERAGE_START -->\n{coverage_md}\n<!-- COVERAGE_END -->",
+    readme_content,
+    flags=re.DOTALL
+)
+
+with open(readme_file, "w", encoding="utf-8") as f:
+    f.write(new_readme)
+
+print("README.md updated with coverage table!")
