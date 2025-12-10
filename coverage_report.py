@@ -18,5 +18,5 @@ for item in data["data"]:
 
         md_lines.append(f"| {filename} | {func_cov} | {line_cov} | {region_cov} | {branch_cov} |")
 
-with open("README.md", "a") as f:
+with open("COVERAGE.md", "a") as f:
     f.write("\n".join(md_lines))
