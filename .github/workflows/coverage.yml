@@ -37,12 +37,7 @@ jobs:
         run: python3 coverage_report.py
 
       - name: Update README with coverage
-        run: |
-          awk -v coverage="$(cat COVERAGE.md)" '
-            /<!-- COVERAGE_START -->/ {print; print coverage; getline; while(!/<!-- COVERAGE_END -->/){getline}; print; next}
-            {print}
-          ' README.md > README.tmp
-          mv README.tmp README.md
+        run: ./update_readme_coverage.sh
 
       - name: Commit and push coverage report
         env:
