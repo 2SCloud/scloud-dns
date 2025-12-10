@@ -38,8 +38,6 @@ jobs:
 
       - name: Update README with coverage
         run: |
-          #!/bin/bash
-          # Create temporary README
           awk -v coverage="$(cat COVERAGE.md)" '
             /<!-- COVERAGE_START -->/ {print; print coverage; getline; while(!/<!-- COVERAGE_END -->/){getline}; print; next}
             {print}
