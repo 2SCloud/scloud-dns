@@ -11,6 +11,7 @@ mod authority;
 pub mod header;
 pub(crate) mod question;
 
+#[derive(Debug, PartialEq)]
 pub struct DNSPacket {
     pub header: Header,
     pub questions: Vec<QuestionSection>,

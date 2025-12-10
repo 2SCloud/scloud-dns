@@ -2,6 +2,7 @@ use crate::exceptions::SCloudException;
 use crate::exceptions::SCloudException::SCLOUD_HEADER_DESERIALIZATION_FAILED;
 
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub struct Header {
     pub id: u16,      // identifier
     pub qr: bool,     // 0 for query, 1 for response

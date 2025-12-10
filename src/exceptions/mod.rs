@@ -5,7 +5,6 @@ pub enum SCloudException {
     SCLOUD_HEADER_DESERIALIZATION_FAILED,
 
     // QUESTION SECTION
-    SCLOUD_QUESTION_IMPOSSIBLE_PARSE_QNAME,
     SCLOUD_QUESTION_DESERIALIZATION_FAILED,
 
     // ANSWER SECTION
@@ -17,6 +16,10 @@ pub enum SCloudException {
     // ADDITIONAL SECTION
     SCLOUD_ADDITIONAL_DESERIALIZATION_FAILED,
 
+    // QNAME
+    SCLOUD_IMPOSSIBLE_PARSE_QNAME,
+    SCLOUD_IMPOSSIBLE_PARSE_QNAME_COMPRESSION_FAILED,
+    
     // QTYPE
     SCLOUD_QTYPE_UNKNOWN_TYPE, //QCLASS
 }
@@ -30,9 +33,6 @@ impl SCloudException {
             }
 
             // QUESTION SECTION
-            SCloudException::SCLOUD_QUESTION_IMPOSSIBLE_PARSE_QNAME => {
-                "Impossible to parse the `q_name`, check if a `q_name is provided.`"
-            }
             SCloudException::SCLOUD_QUESTION_DESERIALIZATION_FAILED => {
                 "Buffer length is less than question section length."
             }
@@ -50,6 +50,14 @@ impl SCloudException {
             // ADDITIONAL SECTION
             SCloudException::SCLOUD_ADDITIONAL_DESERIALIZATION_FAILED => {
                 "Buffer length is less than additional section length."
+            }
+            
+            // QNAME
+            SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME => {
+                "Impossible to parse the `q_name`, check if a `q_name is provided.`"
+            }
+            SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_COMPRESSION_FAILED => {
+                "Impossible to parse the `q_name`, compression 0xC0xx failed."
             }
 
             // QTYPE

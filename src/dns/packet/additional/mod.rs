@@ -5,6 +5,8 @@ use crate::dns::records::{DNSClass, DNSRecordType};
 use crate::exceptions::SCloudException;
 use std::ops::Add;
 
+#[derive(PartialEq)]
+#[derive(Debug)]
 pub(crate) struct AdditionalSection {
     q_name: String,
     q_type: records::DNSRecordType,

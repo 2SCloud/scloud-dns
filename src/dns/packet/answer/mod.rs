@@ -3,6 +3,7 @@ use crate::dns::records::{DNSClass, DNSRecordType};
 use crate::exceptions::SCloudException;
 
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub struct AnswerSection {
     pub q_name: String,
     pub r_type: DNSRecordType,

@@ -1,5 +1,6 @@
 use crate::exceptions::SCloudException;
 
+// TODO: check this function because QNAME start at byte 12, and he seems to not take that in count.
 /// Proper DNS QNAME parsing (length-label encoded + compression support)
 pub(crate) fn parse_qname(buf: &[u8]) -> Result<(String, usize), SCloudException> {
     let mut labels = Vec::new();
@@ -9,7 +10,7 @@ pub(crate) fn parse_qname(buf: &[u8]) -> Result<(String, usize), SCloudException
 
     loop {
         if pos >= buf.len() {
-            return Err(SCloudException::SCLOUD_QUESTION_IMPOSSIBLE_PARSE_QNAME);
+            return Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME);
         }
 
         let len = buf[pos];
@@ -17,7 +18,7 @@ pub(crate) fn parse_qname(buf: &[u8]) -> Result<(String, usize), SCloudException
         // Compression 0xC0xx
         if len & 0xC0 == 0xC0 {
             if pos + 1 >= buf.len() {
-                return Err(SCloudException::SCLOUD_QUESTION_IMPOSSIBLE_PARSE_QNAME);
+                return Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME);
             }
             let offset = (((len as u16 & 0x3F) << 8) | buf[pos + 1] as u16) as usize;
 
@@ -38,7 +39,7 @@ pub(crate) fn parse_qname(buf: &[u8]) -> Result<(String, usize), SCloudException
 
         pos += 1;
         if pos + len as usize > buf.len() {
-            return Err(SCloudException::SCLOUD_QUESTION_IMPOSSIBLE_PARSE_QNAME);
+            return Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME);
         }
 
         let label = &buf[pos..pos + len as usize];
