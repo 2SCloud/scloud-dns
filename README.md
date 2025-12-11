@@ -7,8 +7,11 @@
   <a href="https://github.com/2SCloud/2scloud-dns/actions">
     <img src="https://img.shields.io/github/actions/workflow/status/2SCloud/2scloud-dns/coverage.yml?branch=main" alt="Build Status">
   </a>
+  <a href="https://github.com/2SCloud/2scloud-dns/issues">
+    <img src="https://img.shields.io/github/issues/2SCloud/2scloud-dns" alt="Issues">
+  </a>
   <a href="LICENSE">
-    <img src="https://img.shields.io/github/license/2SCloud/2scloud-dns" alt="License">
+    <img src="https://img.shields.io/badge/LICENSE-MIT_(Non_Commercial)-blue" alt="License">
   </a>
 </p>
 
