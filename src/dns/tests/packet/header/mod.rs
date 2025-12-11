@@ -34,8 +34,8 @@ mod tests {
             0x00,
             0x00];
 
-        println!("expected: {:?}, got: {:?}", expected, result);
-        assert_eq!(expected, result);
+        println!("expected: {:?}\ngot: {:?}", expected, result);
+        assert_eq!(expected, result.unwrap().as_slice());
     }
 
     #[test]
