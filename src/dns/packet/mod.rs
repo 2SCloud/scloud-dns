@@ -1,3 +1,4 @@
+use std::io::Read;
 use crate::dns::packet::additional::AdditionalSection;
 use crate::dns::packet::answer::AnswerSection;
 use crate::dns::packet::authority::AuthoritySection;
@@ -21,6 +22,7 @@ pub struct DNSPacket {
 }
 
 impl DNSPacket {
+    /// Deserialize the DNS packet from a byte array
     pub fn from_bytes(buf: &[u8]) -> Result<DNSPacket, SCloudException> {
         let mut pos = 0;
 
@@ -62,5 +64,14 @@ impl DNSPacket {
             authorities,
             additionals,
         })
+    }
+
+    /// Serialize the DNS packet into a byte array
+    pub fn to_bytes(obj: DNSPacket) -> Result<Vec<u8>, SCloudException> {
+        let mut bytes = Vec::with_capacity(12);
+
+        bytes.extend_from_slice(&*obj.header.to_bytes()?);
+
+        Ok(bytes)
     }
 }

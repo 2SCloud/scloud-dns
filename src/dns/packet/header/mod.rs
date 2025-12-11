@@ -23,24 +23,44 @@ impl Header {
     pub(crate) const DNS_HEADER_LEN: usize = 12;
 
     /// Serialize the DNS header into a byte array
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(Header::DNS_HEADER_LEN);
+    pub fn to_bytes(&self) -> Result<[u8;Self::DNS_HEADER_LEN], SCloudException> {
+        let mut bytes = [0u8; Self::DNS_HEADER_LEN];
+        
+        let id_bytes = self.id.to_be_bytes();
+        bytes[0] = id_bytes[0];
+        bytes[1] = id_bytes[1];
+        
+        let mut flags1 = 0u8;
+        flags1 |= (self.qr as u8 & 0x1) << 7;
+        flags1 |= (self.opcode & 0xF) << 3;
+        flags1 |= (self.aa as u8 & 0x1) << 2;
+        flags1 |= (self.tc as u8 & 0x1) << 1;
+        flags1 |= self.rd as u8 & 0x1;
 
-        buf.extend_from_slice(&self.id.to_be_bytes());
-        buf.push(
-            (self.qr as u8) << 7
-                | self.opcode << 3
-                | (self.aa as u8) << 2
-                | (self.tc as u8) << 1
-                | self.rd as u8,
-        );
-        buf.push((self.ra as u8) << 7 | self.z << 4 | self.rcode);
-        buf.extend_from_slice(&self.qdcount.to_be_bytes());
-        buf.extend_from_slice(&self.ancount.to_be_bytes());
-        buf.extend_from_slice(&self.nscount.to_be_bytes());
-        buf.extend_from_slice(&self.arcount.to_be_bytes());
+        let mut flags2 = 0u8;
+        flags2 |= (self.ra as u8 & 0x1) << 7;
+        flags2 |= (self.z & 0x7) << 4;
 
-        buf
+        bytes[2] = flags1;
+        bytes[3] = flags2;
+        
+        let qdcount_bytes = self.qdcount.to_be_bytes();
+        bytes[4] = qdcount_bytes[0];
+        bytes[5] = qdcount_bytes[1];
+
+        let ancount_bytes = self.ancount.to_be_bytes();
+        bytes[6] = ancount_bytes[0];
+        bytes[7] = ancount_bytes[1];
+
+        let nscount_bytes = self.nscount.to_be_bytes();
+        bytes[8] = nscount_bytes[0];
+        bytes[9] = nscount_bytes[1];
+
+        let arcount_bytes = self.arcount.to_be_bytes();
+        bytes[10] = arcount_bytes[0];
+        bytes[11] = arcount_bytes[1];
+
+        Ok(bytes)
     }
 
     /// Deserialize the DNS header from a byte array
