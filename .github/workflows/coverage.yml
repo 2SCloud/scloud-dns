@@ -94,6 +94,7 @@ jobs:
             "message": "${PERCENT}%",
             "color": "${COLOR}"
           }
+          EOF
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
