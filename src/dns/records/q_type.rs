@@ -2,8 +2,9 @@
 
 use crate::exceptions::SCloudException;
 use std::convert::TryFrom;
+use strum_macros::EnumIter;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
 pub enum DNSRecordType {
     A,
     AAAA,

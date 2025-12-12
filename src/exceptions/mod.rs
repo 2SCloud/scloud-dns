@@ -2,6 +2,7 @@ mod tests;
 
 #[derive(Debug)]
 #[allow(non_camel_case_types)]
+#[derive(PartialEq)]
 pub enum SCloudException {
     // HEADER SECTION
     SCLOUD_HEADER_DESERIALIZATION_FAILED,
