@@ -1,8 +1,10 @@
+use strum_macros::EnumIter;
+
 mod tests;
 
 #[derive(Debug)]
 #[allow(non_camel_case_types)]
-#[derive(PartialEq)]
+#[derive(PartialEq, EnumIter)]
 pub enum SCloudException {
     // HEADER SECTION
     SCLOUD_HEADER_DESERIALIZATION_FAILED,
@@ -70,14 +72,14 @@ impl SCloudException {
             SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME => {
                 "Impossible to parse the `q_name`, check if a `q_name` is provided."
             }
-            SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_COMPRESSION_FAILED => {
-                "Impossible to parse the `q_name`, compression 0xC0xx failed."
-            }
             SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_GREATER_THAN_BUF => {
                 "Impossible to parse the `q_name`, pos is greater than buffer length."
             }
             SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_AND_LEN_GREATER_THAN_BUF => {
                 "Impossible to parse the `q_name`, pos and len are greater than buffer length."
+            }
+            SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_COMPRESSION_FAILED => {
+                "Impossible to parse the `q_name`, compression 0xC0xx failed."
             }
 
             // QTYPE
