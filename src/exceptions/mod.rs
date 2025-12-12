@@ -16,6 +16,9 @@ pub enum SCloudException {
 
     // ANSWER SECTION
     SCLOUD_ANSWER_DESERIALIZATION_FAILED,
+    SCLOUD_ANSWER_DESERIALIZATION_FAILED_LABEL_TOO_LONG,
+    SCLOUD_ANSWER_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POS10,
+    SCLOUD_ANSWER_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POSRD,
 
     // AUTHORITY SECTION
     SCLOUD_AUTHORITY_DESERIALIZATION_FAILED,
@@ -56,6 +59,15 @@ impl SCloudException {
             // ANSWER SECTION
             SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED => {
                 "Buffer length is less than answer section length."
+            }
+            SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_LABEL_TOO_LONG => {
+                "Label too long for DNS."
+            }
+            SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POS10 => {
+                "Impossible to deserialize, `buf.len()` is lower than `pos+10`."
+            }
+            SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POSRD => {
+                "Impossible to deserialize, `buf.len()` is lower than `pos+rdlength`."
             }
 
             // AUTHORITY SECTION

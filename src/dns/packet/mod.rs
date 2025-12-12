@@ -7,7 +7,7 @@ use crate::dns::packet::question::QuestionSection;
 use crate::exceptions::SCloudException;
 
 mod additional;
-mod answer;
+pub(crate) mod answer;
 mod authority;
 pub mod header;
 pub(crate) mod question;
@@ -74,6 +74,9 @@ impl DNSPacket {
         bytes.extend_from_slice(&obj.header.to_bytes()?);
         for q in obj.questions {
             bytes.extend_from_slice(&q.to_bytes()?);
+        }
+        for ans in obj.answers {
+            bytes.extend_from_slice(&ans.to_bytes()?);
         }
 
         Ok(bytes)
