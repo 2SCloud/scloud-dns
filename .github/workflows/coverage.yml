@@ -30,8 +30,8 @@ jobs:
 
       - name: Generate HTML & JSON coverage report
         run: |
-          cargo llvm-cov --json > coverage.json
-          cargo llvm-cov --html
+          cargo llvm-cov --ignore-filename-regex "main.rs" --json > coverage.json
+          cargo llvm-cov --ignore-filename-regex "main.rs" --html
 
       - name: Build Pages site structure
         run: |
