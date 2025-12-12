@@ -24,6 +24,7 @@ pub enum SCloudException {
     // QNAME
     SCLOUD_IMPOSSIBLE_PARSE_QNAME,
     SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_GREATER_THAN_BUF,
+    SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_AND_LEN_GREATER_THAN_BUF,
     SCLOUD_IMPOSSIBLE_PARSE_QNAME_COMPRESSION_FAILED,
     
     // QTYPE
@@ -74,6 +75,9 @@ impl SCloudException {
             }
             SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_GREATER_THAN_BUF => {
                 "Impossible to parse the `q_name`, pos is greater than buffer length."
+            }
+            SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_AND_LEN_GREATER_THAN_BUF => {
+                "Impossible to parse the `q_name`, pos and len are greater than buffer length."
             }
 
             // QTYPE

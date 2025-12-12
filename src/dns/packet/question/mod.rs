@@ -39,7 +39,7 @@ impl QuestionSection {
 
     /// Deserialize the DNS question section from a byte array
     pub fn from_bytes(buf: &[u8]) -> Result<(QuestionSection, usize), SCloudException> {
-        let (q_name, consumed_qname) = parse_qname(buf)?;
+        let (q_name, consumed_qname) = parse_qname(buf, 0)?;
         let mut pos = consumed_qname;
 
         if buf.len() < pos + 4 {

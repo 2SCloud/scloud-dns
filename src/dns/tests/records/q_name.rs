@@ -24,7 +24,7 @@ mod tests {
             0x00,0x01];
 
         let qname_bytes = &bytes[12..]; // start at QNAME
-        let (qname, consumed) = parse_qname(qname_bytes).unwrap();
+        let (qname, consumed) = parse_qname(qname_bytes, 0).unwrap();
         println!("expected: rust.trends.com\ngot: {}", qname);
         assert_eq!(consumed, 17);
         assert_eq!(qname, "rust.trends.com");
@@ -56,16 +56,43 @@ mod tests {
     #[test]
     fn test_pos_superior_to_buf_len(){
         let bytes: &[u8] = &[0x01, 0x01];
-        let result = parse_qname(bytes);
-        println!("expected: SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_GREATER_THAN_BUF\ngot: {:?}", parse_qname(bytes));
+        let result = parse_qname(bytes, 0);
+        println!("expected: SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_GREATER_THAN_BUF\ngot: {:?}", parse_qname(bytes, 0));
         assert!(matches!(result, Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_GREATER_THAN_BUF)));
     }
 
-/*    #[test]
+    #[test]
     fn test_pos_and_len_superior_to_buf_len(){
-        let bytes: &[u8] = &[];
-        let result = parse_qname(bytes);
-        assert!(matches!(result, Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME)));
-    }*/
+        let buf = [5, b'a', b'b'];
+        let result = parse_qname(&buf, 0);
+
+        assert!(matches!(result, Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_AND_LEN_GREATER_THAN_BUF)));
+    }
+
+    #[test]
+    fn test_compression_pointer_ok() {
+        let mut buf = vec![
+            3, b'w', b'w', b'w',
+            6, b'g', b'o', b'o', b'g', b'l', b'e',
+            3, b'c', b'o', b'm',
+            0,
+        ];
+
+        let compressed_offset = buf.len();
+        buf.extend_from_slice(&[0xC0, 0x00]);
+
+        let name = parse_qname_at(&buf, compressed_offset).unwrap();
+
+        assert_eq!(name, "www.google.com");
+    }
+
+
+    #[test]
+    fn test_compression_pointer_out_of_bounds() {
+        let buf = vec![0xC0];
+
+        let result = parse_qname(&buf, 0);
+        assert_eq!(result.unwrap_err(), SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME);
+    }
 
 }

@@ -2,14 +2,12 @@ use crate::exceptions::SCloudException;
 
 // TODO: check this function because QNAME start at byte 12, and he seems to not take that in count.
 /// Proper DNS QNAME parsing (length-label encoded + compression support)
-pub(crate) fn parse_qname(buf: &[u8]) -> Result<(String, usize), SCloudException> {
+pub(crate) fn parse_qname(buf: &[u8], mut pos: usize) -> Result<(String, usize), SCloudException> {
     let mut labels = Vec::new();
-    let mut pos = 0;
     let mut jumped = false;
     let mut consumed = 0;
 
     loop {
-        // TODO: check that seems weird cauz the buffer is normally always greater than 0.
         if pos >= buf.len() {
             return Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_GREATER_THAN_BUF);
         }
@@ -27,10 +25,10 @@ pub(crate) fn parse_qname(buf: &[u8]) -> Result<(String, usize), SCloudException
                 consumed = pos + 2;
             }
 
-            return Ok((parse_qname_at(buf, offset)?, consumed));
+            let name = parse_qname(buf, offset)?.0;
+            return Ok((name, consumed));
         }
 
-        // End of QNAME
         if len == 0 {
             if !jumped {
                 consumed = pos + 1;
@@ -40,7 +38,7 @@ pub(crate) fn parse_qname(buf: &[u8]) -> Result<(String, usize), SCloudException
 
         pos += 1;
         if pos + len as usize > buf.len() {
-            return Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME);
+            return Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_AND_LEN_GREATER_THAN_BUF);
         }
 
         let label = &buf[pos..pos + len as usize];
@@ -48,7 +46,6 @@ pub(crate) fn parse_qname(buf: &[u8]) -> Result<(String, usize), SCloudException
             .map_err(|_| SCloudException::SCLOUD_QUESTION_DESERIALIZATION_FAILED)?;
 
         labels.push(s);
-
         pos += len as usize;
     }
 
@@ -57,6 +54,6 @@ pub(crate) fn parse_qname(buf: &[u8]) -> Result<(String, usize), SCloudException
 
 /// Helper: parse a qname at an offset (used for compression)
 pub(crate) fn parse_qname_at(buf: &[u8], offset: usize) -> Result<String, SCloudException> {
-    let (name, _consumed) = parse_qname(&buf[offset..])?;
+    let (name, _consumed) = parse_qname(&buf, offset)?;
     Ok(name)
 }

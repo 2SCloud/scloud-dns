@@ -17,7 +17,7 @@ pub(crate) struct AuthoritySection {
 
 impl AuthoritySection {
     pub(crate) fn from_bytes(buf: &[u8]) -> Result<(AuthoritySection, usize), SCloudException> {
-        let (q_name, consumed_name) = parse_qname(buf)?;
+        let (q_name, consumed_name) = parse_qname(buf, 0)?;
         let mut pos = consumed_name;
 
         if buf.len() < pos + 10 {

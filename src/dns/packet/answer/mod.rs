@@ -45,7 +45,7 @@ impl AnswerSection {
 
     /// Deserialize one AnswerSection and return (section, consumed_bytes)
     pub fn from_bytes(buf: &[u8]) -> Result<(AnswerSection, usize), SCloudException> {
-        let (q_name, consumed_name) = parse_qname(buf)?;
+        let (q_name, consumed_name) = parse_qname(buf, 0)?;
         let mut pos = consumed_name;
 
         if buf.len() < pos + 10 {
