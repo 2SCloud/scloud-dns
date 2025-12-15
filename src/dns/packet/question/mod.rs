@@ -3,8 +3,7 @@ use crate::dns::records::{DNSClass, DNSRecordType};
 use crate::exceptions::SCloudException;
 
 /// A DNS Question section
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct QuestionSection {
     pub q_name: String,
     pub q_type: DNSRecordType,
@@ -38,15 +37,18 @@ impl QuestionSection {
     }
 
     /// Deserialize the DNS question section from a byte array
-    pub fn from_bytes(buf: &[u8]) -> Result<(QuestionSection, usize), SCloudException> {
-        let (q_name, consumed_qname) = parse_qname(buf, 0)?;
-        let mut pos = consumed_qname;
+    pub fn from_bytes(
+        buf: &[u8],
+        offset: usize,
+    ) -> Result<(QuestionSection, usize), SCloudException> {
+        let (q_name, mut pos) = parse_qname(buf, offset)?;
 
         if buf.len() < pos + 4 {
             return Err(SCloudException::SCLOUD_QUESTION_DESERIALIZATION_FAILED);
         }
 
         let q_type = DNSRecordType::try_from(u16::from_be_bytes([buf[pos], buf[pos + 1]]))?;
+
         let q_class = DNSClass::from(u16::from_be_bytes([buf[pos + 2], buf[pos + 3]]));
 
         pos += 4;
@@ -57,7 +59,7 @@ impl QuestionSection {
                 q_type,
                 q_class,
             },
-            pos,
+            pos - offset,
         ))
     }
 }

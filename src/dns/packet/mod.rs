@@ -1,14 +1,14 @@
-use std::io::Read;
 use crate::dns::packet::additional::AdditionalSection;
 use crate::dns::packet::answer::AnswerSection;
 use crate::dns::packet::authority::AuthoritySection;
 use crate::dns::packet::header::Header;
 use crate::dns::packet::question::QuestionSection;
 use crate::exceptions::SCloudException;
+use std::io::Read;
 
 mod additional;
 pub(crate) mod answer;
-mod authority;
+pub(crate) mod authority;
 pub mod header;
 pub(crate) mod question;
 
@@ -31,28 +31,28 @@ impl DNSPacket {
 
         let mut questions = Vec::new();
         for _ in 0..header.qdcount {
-            let (q, consumed) = QuestionSection::from_bytes(&buf[pos..])?;
+            let (q, consumed) = QuestionSection::from_bytes(&buf, pos)?;
             pos += consumed;
             questions.push(q);
         }
 
         let mut answers = Vec::new();
         for _ in 0..header.ancount {
-            let (ans, consumed) = AnswerSection::from_bytes(&buf[pos..])?;
+            let (ans, consumed) = AnswerSection::from_bytes(&buf, pos)?;
             pos += consumed;
             answers.push(ans);
         }
 
         let mut authorities = Vec::new();
         for _ in 0..header.nscount {
-            let (ns, consumed) = AuthoritySection::from_bytes(&buf[pos..])?;
+            let (ns, consumed) = AuthoritySection::from_bytes(buf, pos)?;
             pos += consumed;
             authorities.push(ns);
         }
 
         let mut additionals = Vec::new();
         for _ in 0..header.arcount {
-            let (add, consumed) = AdditionalSection::from_bytes(&buf[pos..])?;
+            let (add, consumed) = AdditionalSection::from_bytes(&buf, pos)?;
             pos += consumed;
             additionals.push(add);
         }
@@ -77,6 +77,9 @@ impl DNSPacket {
         }
         for ans in obj.answers {
             bytes.extend_from_slice(&ans.to_bytes()?);
+        }
+        for auths in obj.authorities {
+            bytes.extend_from_slice(&auths.to_bytes()?);
         }
 
         Ok(bytes)

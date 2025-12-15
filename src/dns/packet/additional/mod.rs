@@ -1,12 +1,9 @@
-use crate::dns::packet::authority::AuthoritySection;
 use crate::dns::records;
 use crate::dns::records::q_name::parse_qname;
 use crate::dns::records::{DNSClass, DNSRecordType};
 use crate::exceptions::SCloudException;
-use std::ops::Add;
 
-#[derive(PartialEq)]
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub(crate) struct AdditionalSection {
     q_name: String,
     q_type: records::DNSRecordType,
@@ -17,12 +14,15 @@ pub(crate) struct AdditionalSection {
 }
 
 impl AdditionalSection {
-    pub(crate) fn from_bytes(buf: &[u8]) -> Result<(AdditionalSection, usize), SCloudException> {
-        let (q_name, consumed_name) = parse_qname(buf, 0)?;
+    pub(crate) fn from_bytes(
+        buf: &[u8],
+        offset: usize,
+    ) -> Result<(AdditionalSection, usize), SCloudException> {
+        let (q_name, consumed_name) = parse_qname(buf, offset)?;
         let mut pos = consumed_name;
 
         if buf.len() < pos + 10 {
-            return Err(SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED);
+            return Err(SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_BUF_TOO_SHORT);
         }
 
         let q_type = DNSRecordType::try_from(u16::from_be_bytes([buf[pos], buf[pos + 1]]))?;
@@ -38,7 +38,9 @@ impl AdditionalSection {
         pos += 2;
 
         if buf.len() < pos + rdlength as usize {
-            return Err(SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED);
+            return Err(
+                SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_RDATA_OUT_OF_BOUNDS,
+            );
         }
 
         let rdata = buf[pos..pos + rdlength as usize].to_vec();

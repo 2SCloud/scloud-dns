@@ -2,8 +2,7 @@ use crate::dns::records::q_name::parse_qname;
 use crate::dns::records::{DNSClass, DNSRecordType};
 use crate::exceptions::SCloudException;
 
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct AnswerSection {
     pub q_name: String,
     pub r_type: DNSRecordType,
@@ -22,7 +21,7 @@ impl AnswerSection {
         for label in self.q_name.split('.') {
             let len = label.len();
             if len > 63 {
-                return Err(SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_LABEL_TOO_LONG)
+                return Err(SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_LABEL_TOO_LONG);
             }
             buf.push(len as u8);
             buf.extend_from_slice(label.as_bytes());
@@ -44,12 +43,14 @@ impl AnswerSection {
     }
 
     /// Deserialize one AnswerSection and return (section, consumed_bytes)
-    pub fn from_bytes(buf: &[u8]) -> Result<(AnswerSection, usize), SCloudException> {
-        let (q_name, consumed_name) = parse_qname(buf, 0)?;
-        let mut pos = consumed_name;
+    pub(crate) fn from_bytes(
+        buf: &[u8],
+        offset: usize,
+    ) -> Result<(AnswerSection, usize), SCloudException> {
+        let (q_name, mut pos) = parse_qname(buf, offset)?;
 
-        if buf.len() < pos + 10 {
-            return Err(SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POS10);
+        if pos + 10 > buf.len() {
+            return Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_ANSWER_HEADER_TOO_SHORT);
         }
 
         let r_type = DNSRecordType::try_from(u16::from_be_bytes([buf[pos], buf[pos + 1]]))?;
@@ -64,10 +65,9 @@ impl AnswerSection {
         let rdlength = u16::from_be_bytes([buf[pos], buf[pos + 1]]);
         pos += 2;
 
-        if buf.len() < pos + rdlength as usize {
-            return Err(SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POSRD);
+        if pos + rdlength as usize > buf.len() {
+            return Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_ANSWER_RDATA_OUT_OF_BOUNDS);
         }
-
         let rdata = buf[pos..pos + rdlength as usize].to_vec();
         pos += rdlength as usize;
 
@@ -80,7 +80,7 @@ impl AnswerSection {
                 rdlength,
                 rdata,
             },
-            pos,
+            pos - offset,
         ))
     }
 }

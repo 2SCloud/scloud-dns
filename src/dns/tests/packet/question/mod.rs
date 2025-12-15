@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 mod tests {
     use crate::dns::packet::question::QuestionSection;
@@ -8,13 +7,22 @@ mod tests {
     #[test]
     fn test_qname_too_long_for_dns() {
         let qs: QuestionSection = QuestionSection {
-            q_name: "qnamemorethan63characterstotestifthecodereallypanicornottestdotcom".parse().unwrap(),
+            q_name: "qnamemorethan63characterstotestifthecodereallypanicornottestdotcom"
+                .parse()
+                .unwrap(),
             q_type: DNSRecordType::A,
             q_class: DNSClass::IN,
         };
         let result = qs.to_bytes();
 
-        println!("expected: {:?}\ngot: {:?}", SCloudException::SCLOUD_QUESTION_SERIALIZATION_FAILED_QNAME_TOO_LONG, result);
-        assert_eq!(result.err().unwrap(), SCloudException::SCLOUD_QUESTION_SERIALIZATION_FAILED_QNAME_TOO_LONG);
+        println!(
+            "expected: {:?}\ngot: {:?}",
+            SCloudException::SCLOUD_QUESTION_SERIALIZATION_FAILED_QNAME_TOO_LONG,
+            result
+        );
+        assert_eq!(
+            result.err().unwrap(),
+            SCloudException::SCLOUD_QUESTION_SERIALIZATION_FAILED_QNAME_TOO_LONG
+        );
     }
 }

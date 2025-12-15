@@ -4,24 +4,24 @@ use crate::dns::records::q_name::parse_qname;
 use crate::dns::records::{DNSClass, DNSRecordType};
 use crate::exceptions::SCloudException;
 
-#[derive(PartialEq)]
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub(crate) struct AuthoritySection {
-    q_name: String,
-    q_type: records::DNSRecordType,
-    q_class: DNSClass,
-    ttl: u32,
-    pub rdlength: u16,
-    pub rdata: Vec<u8>,
+    pub(crate) q_name: String,
+    pub(crate) q_type: DNSRecordType,
+    pub(crate) q_class: DNSClass,
+    pub(crate) ttl: u32,
+    pub(crate) ns_name: String,
 }
 
 impl AuthoritySection {
-    pub(crate) fn from_bytes(buf: &[u8]) -> Result<(AuthoritySection, usize), SCloudException> {
-        let (q_name, consumed_name) = parse_qname(buf, 0)?;
-        let mut pos = consumed_name;
+    pub(crate) fn from_bytes(
+        buf: &[u8],
+        offset: usize,
+    ) -> Result<(AuthoritySection, usize), SCloudException> {
+        let (q_name, mut pos) = parse_qname(buf, offset)?;
 
         if buf.len() < pos + 10 {
-            return Err(SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED);
+            return Err(SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_BUF_TOO_SHORT);
         }
 
         let q_type = DNSRecordType::try_from(u16::from_be_bytes([buf[pos], buf[pos + 1]]))?;
@@ -37,10 +37,13 @@ impl AuthoritySection {
         pos += 2;
 
         if buf.len() < pos + rdlength as usize {
-            return Err(SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED);
+            return Err(
+                SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_RDATA_OUT_OF_BOUNDS,
+            );
         }
 
-        let rdata = buf[pos..pos + rdlength as usize].to_vec();
+        let (ns_name, _) = parse_qname(buf, pos)?;
+
         pos += rdlength as usize;
 
         Ok((
@@ -49,22 +52,17 @@ impl AuthoritySection {
                 q_type,
                 q_class,
                 ttl,
-                rdlength,
-                rdata,
+                ns_name,
             },
-            pos,
+            pos - offset,
         ))
     }
 
-    pub(crate) fn to_bytes(&self) -> Vec<u8> {
-        let mut buf: Vec<u8> = Vec::new();
+    pub(crate) fn to_bytes(&self) -> Result<Vec<u8>, SCloudException> {
+        let mut buf = Vec::new();
 
         for label in self.q_name.split('.') {
-            let len = label.len();
-            if len > 63 {
-                panic!("Label too long for DNS: {}", label);
-            }
-            buf.push(len as u8);
+            buf.push(label.len() as u8);
             buf.extend_from_slice(label.as_bytes());
         }
         buf.push(0x00);
@@ -77,9 +75,17 @@ impl AuthoritySection {
         buf.extend_from_slice(&qclass_u16.to_be_bytes());
 
         buf.extend_from_slice(&self.ttl.to_be_bytes());
-        buf.extend_from_slice(&self.rdlength.to_be_bytes());
-        buf.extend_from_slice(&self.rdata);
 
-        buf
+        let mut rdata = Vec::new();
+        for label in self.ns_name.split('.') {
+            rdata.push(label.len() as u8);
+            rdata.extend_from_slice(label.as_bytes());
+        }
+        rdata.push(0x00);
+
+        buf.extend_from_slice(&(rdata.len() as u16).to_be_bytes());
+        buf.extend_from_slice(&rdata);
+
+        Ok(buf)
     }
 }
