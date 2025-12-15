@@ -21,8 +21,8 @@ pub enum SCloudException {
     SCLOUD_IMPOSSIBLE_PARSE_ANSWER_RDATA_OUT_OF_BOUNDS,
 
     // AUTHORITY SECTION
-    SCLOUD_AUTHORITY_DESERIALIZATION_FAILED,
-    SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POS10,
+    SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_RDATA_OUT_OF_BOUNDS,
+    SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_BUF_TOO_SHORT,
 
     // ADDITIONAL SECTION
     SCLOUD_ADDITIONAL_DESERIALIZATION_FAILED,
@@ -32,7 +32,7 @@ pub enum SCloudException {
     SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_GREATER_THAN_BUF,
     SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_AND_LEN_GREATER_THAN_BUF,
     SCLOUD_IMPOSSIBLE_PARSE_QNAME_COMPRESSION_FAILED,
-    
+
     // QTYPE
     SCLOUD_QTYPE_UNKNOWN_TYPE, //QCLASS
 }
@@ -45,9 +45,7 @@ impl SCloudException {
                 "Buffer length is less than header length."
             }
 
-            SCloudException::SCLOUD_HEADER_BYTES_EMPTY => {
-                "The header is empty."
-            }
+            SCloudException::SCLOUD_HEADER_BYTES_EMPTY => "The header is empty.",
 
             // QUESTION SECTION
             SCloudException::SCLOUD_QUESTION_DESERIALIZATION_FAILED => {
@@ -72,18 +70,18 @@ impl SCloudException {
             }
 
             // AUTHORITY SECTION
-            SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED => {
+            SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_RDATA_OUT_OF_BOUNDS => {
                 "Buffer length is less than authority section length."
             }
-            SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POS10 => {
-                "Impossible to deserialize, `buf.len()` is lower than `pos+10`."
+            SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_BUF_TOO_SHORT => {
+                "Impossible to deserialize, `buf.len()` is lower than `pos+10`. (buf too short)"
             }
 
             // ADDITIONAL SECTION
             SCloudException::SCLOUD_ADDITIONAL_DESERIALIZATION_FAILED => {
                 "Buffer length is less than additional section length."
             }
-            
+
             // QNAME
             SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME => {
                 "Impossible to parse the `q_name`, check if a `q_name` is provided."

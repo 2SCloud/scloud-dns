@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 mod tests {
     use crate::dns::packet::header::Header;
@@ -6,7 +5,7 @@ mod tests {
 
     #[test]
     fn test_header_to_bytes() {
-        let header: Header = Header{
+        let header: Header = Header {
             id: 43690,
             qr: false,
             opcode: 0,
@@ -25,14 +24,8 @@ mod tests {
         let result = Header::to_bytes(&header);
 
         let expected: &[u8] = &[
-            0xAA,0xAA,
-            0x01,
-            0x00,0x00,0x01,0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00];
+            0xAA, 0xAA, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ];
 
         println!("expected: {:?}\ngot: {:?}", expected, result);
         assert_eq!(expected, result.unwrap().as_slice());
@@ -41,13 +34,18 @@ mod tests {
     #[test]
     fn test_header_deserialization_failure() {
         let result = Header::from_bytes(&[0xAA, 0xAA, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00]);
-        assert!(matches!(result, Err(SCloudException::SCLOUD_HEADER_DESERIALIZATION_FAILED)));
+        assert!(matches!(
+            result,
+            Err(SCloudException::SCLOUD_HEADER_DESERIALIZATION_FAILED)
+        ));
     }
 
     #[test]
     fn test_header_deserialization_buffer_empty() {
         let result = Header::from_bytes(&[]);
-        assert!(matches!(result, Err(SCloudException::SCLOUD_HEADER_BYTES_EMPTY)));
+        assert!(matches!(
+            result,
+            Err(SCloudException::SCLOUD_HEADER_BYTES_EMPTY)
+        ));
     }
-
 }

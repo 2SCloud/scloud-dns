@@ -1,14 +1,12 @@
-
 #[cfg(test)]
 mod tests {
-    use strum::IntoEnumIterator;
     use crate::dns::records::DNSRecordType;
     use crate::exceptions::SCloudException;
+    use strum::IntoEnumIterator;
 
     #[test]
     fn test_tryfrom_u16_for_dns_record_type() {
         for rtype in DNSRecordType::iter() {
-
             if let DNSRecordType::Unknown(_) = rtype {
                 continue;
             }
@@ -27,7 +25,6 @@ mod tests {
         assert_eq!(code, SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE);
     }
 
-
     #[test]
     fn test_tryfrom_dns_record_type_for_u16() {
         let result = DNSRecordType::try_from(39).unwrap();
@@ -38,7 +35,11 @@ mod tests {
     #[test]
     fn test_tryfrom_dns_record_type_for_u16_failed() {
         let result = DNSRecordType::try_from(45616).err().unwrap();
-        println!("expected: {:?}\ngot: {:?}", SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE, result);
+        println!(
+            "expected: {:?}\ngot: {:?}",
+            SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE,
+            result
+        );
         assert_eq!(result, SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE);
     }
 
@@ -54,8 +55,11 @@ mod tests {
     fn test_tryfrom_array_for_dns_record_type_failed() {
         let bytes: &[u8; 2] = &[0x01, 0x80];
         let result = DNSRecordType::try_from(bytes).err().unwrap();
-        println!("expected: {:?}\ngot: {:?}", SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE, result);
+        println!(
+            "expected: {:?}\ngot: {:?}",
+            SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE,
+            result
+        );
         assert_eq!(result, SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE);
     }
-
 }

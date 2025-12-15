@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 mod tests {
     use crate::dns::records::DNSClass;
@@ -27,7 +26,6 @@ mod tests {
 
     #[test]
     fn test_dnsclass_from_bytes() {
-
         let bytes = [0x00, 0x01];
         assert_eq!(DNSClass::from(&bytes), DNSClass::IN);
 
@@ -40,5 +38,4 @@ mod tests {
         let bytes = [0x12, 0x34];
         assert_eq!(DNSClass::from(&bytes), DNSClass::Unknown(0x1234));
     }
-
 }

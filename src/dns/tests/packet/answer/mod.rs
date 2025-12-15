@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 mod tests {
     use crate::dns::packet::answer::AnswerSection;
@@ -7,8 +6,10 @@ mod tests {
 
     #[test]
     fn test_qname_too_long_for_dns() {
-        let asec: AnswerSection = AnswerSection{
-            q_name: "qnamemorethan63characterstotestifthecodereallypanicornottestdotcom".parse().unwrap(),
+        let asec: AnswerSection = AnswerSection {
+            q_name: "qnamemorethan63characterstotestifthecodereallypanicornottestdotcom"
+                .parse()
+                .unwrap(),
             r_type: DNSRecordType::A,
             r_class: DNSClass::IN,
             ttl: 0,
@@ -17,8 +18,15 @@ mod tests {
         };
         let result = asec.to_bytes();
 
-        println!("expected: {:?}\ngot: {:?}", SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_LABEL_TOO_LONG, asec.to_bytes().err().unwrap());
-        assert_eq!(result.err().unwrap(), SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_LABEL_TOO_LONG);
+        println!(
+            "expected: {:?}\ngot: {:?}",
+            SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_LABEL_TOO_LONG,
+            asec.to_bytes().err().unwrap()
+        );
+        assert_eq!(
+            result.err().unwrap(),
+            SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_LABEL_TOO_LONG
+        );
     }
 
     #[test]
@@ -37,12 +45,7 @@ mod tests {
     fn test_answer_deserialization_fails_when_buf_lower_than_posrd() {
         let mut buf = vec![3, b'w', b'w', b'w', 0];
 
-        buf.extend_from_slice(&[
-            0x00, 0x01,
-            0x00, 0x01,
-            0x00, 0x00, 0x00, 0x10,
-            0x00, 0x05,
-        ]);
+        buf.extend_from_slice(&[0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10, 0x00, 0x05]);
 
         let result = AnswerSection::from_bytes(&buf, 0);
 

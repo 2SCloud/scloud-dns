@@ -1,11 +1,10 @@
-
 #[cfg(test)]
-mod tests{
-    use strum::IntoEnumIterator;
+mod tests {
     use crate::exceptions::SCloudException;
+    use strum::IntoEnumIterator;
 
     #[test]
-    fn test_exceptions_to_str(){
+    fn test_exceptions_to_str() {
         let mut i: usize = 0;
         let ex_msg_array: [&'static str; 16] = [
             //HEADER SECTION
@@ -21,7 +20,7 @@ mod tests{
             "Failed to parse DNS answer section: RDLENGTH exceeds remaining buffer size.",
             // AUTHORITY SECTION
             "Buffer length is less than authority section length.",
-            "Impossible to deserialize, `buf.len()` is lower than `pos+10`.",
+            "Impossible to deserialize, `buf.len()` is lower than `pos+10`. (buf too short)",
             // ADDITIONAL SECTION
             "Buffer length is less than additional section length.",
             // QNAME
@@ -30,13 +29,16 @@ mod tests{
             "Impossible to parse the `q_name`, pos and len are greater than buffer length.",
             "Impossible to parse the `q_name`, compression 0xC0xx failed.",
             // QTYPE
-            "Unknown `q_type`."
+            "Unknown `q_type`.",
         ];
         for ex in SCloudException::iter() {
-            println!("expected: {:?}\ngot: {}", ex_msg_array[i], SCloudException::to_str(&ex));
+            println!(
+                "expected: {:?}\ngot: {}",
+                ex_msg_array[i],
+                SCloudException::to_str(&ex)
+            );
             assert_eq!(SCloudException::to_str(&ex), ex_msg_array[i]);
-            i+=1;
+            i += 1;
         }
     }
-
 }

@@ -1,10 +1,10 @@
-use std::io::Read;
 use crate::dns::packet::additional::AdditionalSection;
 use crate::dns::packet::answer::AnswerSection;
 use crate::dns::packet::authority::AuthoritySection;
 use crate::dns::packet::header::Header;
 use crate::dns::packet::question::QuestionSection;
 use crate::exceptions::SCloudException;
+use std::io::Read;
 
 mod additional;
 pub(crate) mod answer;
@@ -77,6 +77,9 @@ impl DNSPacket {
         }
         for ans in obj.answers {
             bytes.extend_from_slice(&ans.to_bytes()?);
+        }
+        for auths in obj.authorities {
+            bytes.extend_from_slice(&auths.to_bytes()?);
         }
 
         Ok(bytes)

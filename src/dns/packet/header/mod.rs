@@ -1,8 +1,7 @@
 use crate::exceptions::SCloudException;
 use crate::exceptions::SCloudException::SCLOUD_HEADER_DESERIALIZATION_FAILED;
 
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Header {
     pub id: u16,      // identifier
     pub qr: bool,     // 0 for query, 1 for response
@@ -23,13 +22,13 @@ impl Header {
     pub(crate) const DNS_HEADER_LEN: usize = 12;
 
     /// Serialize the DNS header into a byte array
-    pub fn to_bytes(&self) -> Result<[u8;Self::DNS_HEADER_LEN], SCloudException> {
+    pub fn to_bytes(&self) -> Result<[u8; Self::DNS_HEADER_LEN], SCloudException> {
         let mut bytes = [0u8; Self::DNS_HEADER_LEN];
-        
+
         let id_bytes = self.id.to_be_bytes();
         bytes[0] = id_bytes[0];
         bytes[1] = id_bytes[1];
-        
+
         let mut flags1 = 0u8;
         flags1 |= (self.qr as u8 & 0x1) << 7;
         flags1 |= (self.opcode & 0xF) << 3;
@@ -43,7 +42,7 @@ impl Header {
 
         bytes[2] = flags1;
         bytes[3] = flags2;
-        
+
         let qdcount_bytes = self.qdcount.to_be_bytes();
         bytes[4] = qdcount_bytes[0];
         bytes[5] = qdcount_bytes[1];
@@ -65,7 +64,6 @@ impl Header {
 
     /// Deserialize the DNS header from a byte array
     pub fn from_bytes(buf: &[u8]) -> Result<Header, SCloudException> {
-
         if buf.len() == 0 {
             return Err(SCloudException::SCLOUD_HEADER_BYTES_EMPTY);
         }

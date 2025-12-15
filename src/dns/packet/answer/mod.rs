@@ -2,8 +2,7 @@ use crate::dns::records::q_name::parse_qname;
 use crate::dns::records::{DNSClass, DNSRecordType};
 use crate::exceptions::SCloudException;
 
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct AnswerSection {
     pub q_name: String,
     pub r_type: DNSRecordType,
@@ -22,7 +21,7 @@ impl AnswerSection {
         for label in self.q_name.split('.') {
             let len = label.len();
             if len > 63 {
-                return Err(SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_LABEL_TOO_LONG)
+                return Err(SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_LABEL_TOO_LONG);
             }
             buf.push(len as u8);
             buf.extend_from_slice(label.as_bytes());

@@ -1,2 +1,2 @@
-pub mod records;
 mod packet;
+pub mod records;

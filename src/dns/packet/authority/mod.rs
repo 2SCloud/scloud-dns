@@ -18,11 +18,10 @@ impl AuthoritySection {
         buf: &[u8],
         offset: usize,
     ) -> Result<(AuthoritySection, usize), SCloudException> {
-        
         let (q_name, mut pos) = parse_qname(buf, offset)?;
 
         if buf.len() < pos + 10 {
-            return Err(SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POS10);
+            return Err(SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_BUF_TOO_SHORT);
         }
 
         let q_type = DNSRecordType::try_from(u16::from_be_bytes([buf[pos], buf[pos + 1]]))?;
@@ -38,7 +37,9 @@ impl AuthoritySection {
         pos += 2;
 
         if buf.len() < pos + rdlength as usize {
-            return Err(SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED);
+            return Err(
+                SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_RDATA_OUT_OF_BOUNDS,
+            );
         }
 
         let (ns_name, _) = parse_qname(buf, pos)?;
@@ -57,7 +58,7 @@ impl AuthoritySection {
         ))
     }
 
-    pub(crate) fn to_bytes(&self) -> Vec<u8> {
+    pub(crate) fn to_bytes(&self) -> Result<Vec<u8>, SCloudException> {
         let mut buf = Vec::new();
 
         for label in self.q_name.split('.') {
@@ -66,8 +67,8 @@ impl AuthoritySection {
         }
         buf.push(0x00);
 
-        let qtype_u16 = u16::try_from(self.q_type)
-            .expect("Cannot convert AuthoritySection q_type to u16");
+        let qtype_u16 =
+            u16::try_from(self.q_type).expect("Cannot convert AuthoritySection q_type to u16");
         buf.extend_from_slice(&qtype_u16.to_be_bytes());
 
         let qclass_u16 = u16::from(self.q_class);
@@ -85,6 +86,6 @@ impl AuthoritySection {
         buf.extend_from_slice(&(rdata.len() as u16).to_be_bytes());
         buf.extend_from_slice(&rdata);
 
-        buf
+        Ok(buf)
     }
 }
