@@ -29,7 +29,7 @@ mod tests {
 
         assert_eq!(
             result.unwrap_err(),
-            SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POS10
+            SCloudException::SCLOUD_IMPOSSIBLE_PARSE_ANSWER_HEADER_TOO_SHORT
         );
     }
 
@@ -48,7 +48,7 @@ mod tests {
 
         assert_eq!(
             result.unwrap_err(),
-            SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POSRD
+            SCloudException::SCLOUD_IMPOSSIBLE_PARSE_ANSWER_RDATA_OUT_OF_BOUNDS
         );
     }
 }

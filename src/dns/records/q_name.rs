@@ -2,10 +2,13 @@ use crate::exceptions::SCloudException;
 
 // TODO: check this function because QNAME start at byte 12, and he seems to not take that in count.
 /// Proper DNS QNAME parsing (length-label encoded + compression support)
-pub(crate) fn parse_qname(buf: &[u8], mut pos: usize) -> Result<(String, usize), SCloudException> {
+pub(crate) fn parse_qname(
+    buf: &[u8],
+    mut pos: usize,
+) -> Result<(String, usize), SCloudException> {
     let mut labels = Vec::new();
     let mut jumped = false;
-    let mut consumed = 0;
+    let mut end_pos = pos;
 
     loop {
         if pos >= buf.len() {
@@ -19,26 +22,33 @@ pub(crate) fn parse_qname(buf: &[u8], mut pos: usize) -> Result<(String, usize),
             if pos + 1 >= buf.len() {
                 return Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME);
             }
+
             let offset = (((len as u16 & 0x3F) << 8) | buf[pos + 1] as u16) as usize;
 
             if !jumped {
-                consumed = pos + 2;
+                end_pos = pos + 2;
             }
 
-            let name = parse_qname(buf, offset)?.0;
-            return Ok((name, consumed));
+            jumped = true;
+
+            let (name, _) = parse_qname(buf, offset)?;
+            labels.extend(name.split('.').map(|s| s.to_string()));
+            break;
         }
 
         if len == 0 {
             if !jumped {
-                consumed = pos + 1;
+                end_pos = pos + 1;
             }
             break;
         }
 
         pos += 1;
+
         if pos + len as usize > buf.len() {
-            return Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_AND_LEN_GREATER_THAN_BUF);
+            return Err(
+                SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_AND_LEN_GREATER_THAN_BUF,
+            );
         }
 
         let label = &buf[pos..pos + len as usize];
@@ -49,7 +59,7 @@ pub(crate) fn parse_qname(buf: &[u8], mut pos: usize) -> Result<(String, usize),
         pos += len as usize;
     }
 
-    Ok((labels.join("."), consumed))
+    Ok((labels.join("."), end_pos))
 }
 
 /// Helper: parse a qname at an offset (used for compression)

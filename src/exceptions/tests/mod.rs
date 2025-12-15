@@ -17,8 +17,8 @@ mod tests{
             // ANSWER SECTION
             "Buffer length is less than answer section length.",
             "Label too long for DNS.",
-            "Impossible to deserialize, `buf.len()` is lower than `pos+10`.",
-            "Impossible to deserialize, `buf.len()` is lower than `pos+rdlength`.",
+            "Failed to parse DNS answer section: not enough bytes for TYPE, CLASS, TTL, and RDLENGTH.",
+            "Failed to parse DNS answer section: RDLENGTH exceeds remaining buffer size.",
             // AUTHORITY SECTION
             "Buffer length is less than authority section length.",
             "Impossible to deserialize, `buf.len()` is lower than `pos+10`.",

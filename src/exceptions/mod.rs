@@ -17,8 +17,8 @@ pub enum SCloudException {
     // ANSWER SECTION
     SCLOUD_ANSWER_DESERIALIZATION_FAILED,
     SCLOUD_ANSWER_DESERIALIZATION_FAILED_LABEL_TOO_LONG,
-    SCLOUD_ANSWER_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POS10,
-    SCLOUD_ANSWER_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POSRD,
+    SCLOUD_IMPOSSIBLE_PARSE_ANSWER_HEADER_TOO_SHORT,
+    SCLOUD_IMPOSSIBLE_PARSE_ANSWER_RDATA_OUT_OF_BOUNDS,
 
     // AUTHORITY SECTION
     SCLOUD_AUTHORITY_DESERIALIZATION_FAILED,
@@ -64,11 +64,11 @@ impl SCloudException {
             SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_LABEL_TOO_LONG => {
                 "Label too long for DNS."
             }
-            SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POS10 => {
-                "Impossible to deserialize, `buf.len()` is lower than `pos+10`."
+            SCloudException::SCLOUD_IMPOSSIBLE_PARSE_ANSWER_HEADER_TOO_SHORT => {
+                "Failed to parse DNS answer section: not enough bytes for TYPE, CLASS, TTL, and RDLENGTH."
             }
-            SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POSRD => {
-                "Impossible to deserialize, `buf.len()` is lower than `pos+rdlength`."
+            SCloudException::SCLOUD_IMPOSSIBLE_PARSE_ANSWER_RDATA_OUT_OF_BOUNDS => {
+                "Failed to parse DNS answer section: RDLENGTH exceeds remaining buffer size."
             }
 
             // AUTHORITY SECTION

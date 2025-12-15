@@ -44,12 +44,14 @@ impl AnswerSection {
     }
 
     /// Deserialize one AnswerSection and return (section, consumed_bytes)
-    pub fn from_bytes(buf: &[u8], offset: usize) -> Result<(AnswerSection, usize), SCloudException> {
-        let (q_name, consumed_name) = parse_qname(buf, offset)?;
-        let mut pos = consumed_name;
+    pub(crate) fn from_bytes(
+        buf: &[u8],
+        offset: usize,
+    ) -> Result<(AnswerSection, usize), SCloudException> {
+        let (q_name, mut pos) = parse_qname(buf, offset)?;
 
-        if buf.len() < pos + 10 {
-            return Err(SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POS10);
+        if pos + 10 > buf.len() {
+            return Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_ANSWER_HEADER_TOO_SHORT);
         }
 
         let r_type = DNSRecordType::try_from(u16::from_be_bytes([buf[pos], buf[pos + 1]]))?;
@@ -64,10 +66,9 @@ impl AnswerSection {
         let rdlength = u16::from_be_bytes([buf[pos], buf[pos + 1]]);
         pos += 2;
 
-        if buf.len() < pos + rdlength as usize {
-            return Err(SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_BUF_LOWER_THAN_POSRD);
+        if pos + rdlength as usize > buf.len() {
+            return Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_ANSWER_RDATA_OUT_OF_BOUNDS);
         }
-
         let rdata = buf[pos..pos + rdlength as usize].to_vec();
         pos += rdlength as usize;
 
@@ -80,7 +81,7 @@ impl AnswerSection {
                 rdlength,
                 rdata,
             },
-            pos,
+            pos - offset,
         ))
     }
 }

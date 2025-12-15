@@ -16,48 +16,47 @@ mod tests {
     fn test_dns_packet_from_bytes() {
 
         let bytes: &[u8] = &[
-            0xAA,0xAA,
-            0x01, 0x00,
-            0x00, 0x01,
-            0x00, 0x01,
-            0x00, 0x01,
-            0x00,
+            // ===== DNS HEADER =====
+            0xAA, 0xAA, // ID
+            0x01, 0x00, // Flags: standard query response, no error
+            0x00, 0x01, // QDCOUNT = 1
+            0x00, 0x01, // ANCOUNT = 1
+            0x00, 0x01, // NSCOUNT = 1
+            0x00, 0x00, // ARCOUNT = 0
 
-            // QUESTION SECTION
-            0x00, 0x04, 0x72, 0x75, 0x73, 0x74,
-            0x06, 0x74, 0x72, 0x65, 0x6E, 0x64, 0x73,
-            0x03, 0x63, 0x6F, 0x6D,
-            0x00,
-            0x00, 0x01,
-            0x00, 0x01,
+            // ===== QUESTION SECTION =====
+            0x04, b'r', b'u', b's', b't',
+            0x06, b't', b'r', b'e', b'n', b'd', b's',
+            0x03, b'c', b'o', b'm',
+            0x00,             // end of QNAME
+            0x00, 0x01,       // QTYPE = A
+            0x00, 0x01,       // QCLASS = IN
 
-            // ANSWER SECTION
-            0x04, 0x72, 0x75, 0x73,
-            0x74, 0x06, 0x74, 0x72,
-            0x65, 0x6E, 0x64, 0x73,
-            0x03, 0x63, 0x6F, 0x6D,
-            0x00,
-            0x00, 0x01,
-            0x00, 0x01,              // CLASS
-            0x00, 0x00, 0x00, 0x00,  // TTL
-            0x00, 0x00,              // RDLENGTH
-            //0x00, // DISABLED: cauz we don't need bytes for `rdata` since `rdlength` == [0x00, 0x00]
-
-            // AUTHORITY SECTION (NS record)
-            0x04, 0x72, 0x75, 0x73, 0x74,
-            0x06, 0x74, 0x72, 0x65, 0x6E, 0x64, 0x73,
-            0x03, 0x63, 0x6F, 0x6D,
-            0x00,
-            0x00, 0x02,             // TYPE = NS
-            0x00, 0x01,             // CLASS = IN
+            // ===== ANSWER SECTION =====
+            0x04, b'r', b'u', b's', b't',
+            0x06, b't', b'r', b'e', b'n', b'd', b's',
+            0x03, b'c', b'o', b'm',
+            0x00,             // NAME
+            0x00, 0x01,       // TYPE = A
+            0x00, 0x01,       // CLASS = IN
             0x00, 0x00, 0x00, 0x3C, // TTL = 60
-            0x00, 0x11,             // RDLENGTH = 17
-            0x03, 0x6E, 0x73, 0x31, // ns1
-            0x06, 0x74, 0x72, 0x65, 0x6E, 0x64, 0x73, // trends
-            0x03, 0x63, 0x6F, 0x6D, // com
-            0x00,
-        ];
+            0x00, 0x04,       // RDLENGTH = 4
+            0x7F, 0x00, 0x00, 0x01, // RDATA = 127.0.0.1
 
+            // ===== AUTHORITY SECTION (NS) =====
+            0x04, b'r', b'u', b's', b't',
+            0x06, b't', b'r', b'e', b'n', b'd', b's',
+            0x03, b'c', b'o', b'm',
+            0x00,             // NAME
+            0x00, 0x02,       // TYPE = NS
+            0x00, 0x01,       // CLASS = IN
+            0x00, 0x00, 0x00, 0x3C, // TTL = 60
+            0x00, 0x10,       // RDLENGTH = 16
+            0x03, b'n', b's', b'1',
+            0x06, b't', b'r', b'e', b'n', b'd', b's',
+            0x03, b'c', b'o', b'm',
+            0x00,             // end of NS name
+        ];
 
         let expected_packet = DNSPacket{
             header: Header {
@@ -80,25 +79,20 @@ mod tests {
                 q_type: DNSRecordType::A,
                 q_class: DNSClass::IN
             }],
-            answers: vec![AnswerSection{
+            answers: vec![AnswerSection {
                 q_name: "rust.trends.com".to_string(),
                 r_type: DNSRecordType::A,
                 r_class: DNSClass::IN,
-                ttl: 0,
-                rdlength: 0,
-                rdata: vec![]
+                ttl: 60,
+                rdlength: 4,
+                rdata: vec![127, 0, 0, 1],
             }],
             authorities: vec![AuthoritySection{
                 q_name: "rust.trends.com".to_string(),
                 q_type: DNSRecordType::NS,
                 q_class: DNSClass::IN,
                 ttl: 60,
-                rdlength: 17,
-                rdata: vec![0x03, 0x6E, 0x73, 0x31,
-                            0x06, 0x74, 0x72, 0x65, 0x6E, 0x64, 0x73,
-                            0x03, 0x63, 0x6F, 0x6D,
-                            0x00
-                ]
+                ns_name: "ns1.trends.com".to_string()
             }],
             additionals: vec![],
         };
