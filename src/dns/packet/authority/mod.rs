@@ -1,5 +1,3 @@
-use crate::dns::packet::answer::AnswerSection;
-use crate::dns::records;
 use crate::dns::records::q_name::parse_qname;
 use crate::dns::records::{DNSClass, DNSRecordType};
 use crate::exceptions::SCloudException;

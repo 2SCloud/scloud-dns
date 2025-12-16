@@ -55,16 +55,19 @@ impl StubResolver {
                 }
                 Err(e) => {
                     println!("[STUB_RESOLVER] recv_from error: {:?}", e);
-                    if e.kind() == std::io::ErrorKind::WouldBlock  || e.kind() == std::io::ErrorKind::TimedOut {
+                    if e.kind() == std::io::ErrorKind::WouldBlock
+                        || e.kind() == std::io::ErrorKind::TimedOut
+                    {
                         last_err = Some(e);
                         continue;
                     } else {
-                        return Err(SCloudException::SCLOUD_STUB_RESOLVER_FAILED_TO_RECV_FROM_SOCKET);
+                        return Err(
+                            SCloudException::SCLOUD_STUB_RESOLVER_FAILED_TO_RECV_FROM_SOCKET,
+                        );
                     }
                 }
             }
         }
         Err(SCloudException::SCLOUD_STUB_RESOLVER_FAILED_TO_RECV_FROM_SOCKET)
-
     }
 }

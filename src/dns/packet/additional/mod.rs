@@ -1,4 +1,3 @@
-use crate::dns::records;
 use crate::dns::records::q_name::parse_qname;
 use crate::dns::records::{DNSClass, DNSRecordType};
 use crate::exceptions::SCloudException;
@@ -6,7 +5,7 @@ use crate::exceptions::SCloudException;
 #[derive(PartialEq, Debug)]
 pub(crate) struct AdditionalSection {
     pub(crate) q_name: String,
-    pub(crate) q_type: records::DNSRecordType,
+    pub(crate) q_type: DNSRecordType,
     pub(crate) q_class: DNSClass,
     pub(crate) ttl: u32,
     pub rdlength: u16,
