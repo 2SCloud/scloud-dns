@@ -1,1 +1,70 @@
-pub(crate) mod resolver;
+use crate::dns::packet::DNSPacket;
+use crate::dns::packet::question::QuestionSection;
+use crate::exceptions::SCloudException;
+
+pub struct StubResolver {
+    server: std::net::SocketAddr,
+    timeout: std::time::Duration,
+    retries: u8,
+}
+
+impl StubResolver {
+    /// Crée un nouveau stub resolver vers le serveur DNS donné
+    pub fn new(server: std::net::SocketAddr) -> Self {
+        Self {
+            server,
+            timeout: std::time::Duration::from_secs(10),
+            retries: 2,
+        }
+    }
+
+    /// Résout une liste de questions DNS et renvoie le paquet réponse
+    pub fn resolve(&self, questions: Vec<QuestionSection>) -> Result<DNSPacket, SCloudException> {
+        let packet = DNSPacket::new_query(questions);
+        let request_id = packet.header.id;
+
+        let socket = std::net::UdpSocket::bind("0.0.0.0:0")
+            .map_err(|_| SCloudException::SCLOUD_STUB_RESOLVER_FAILED_TO_CREATE_SOCKET)?;
+        socket
+            .set_read_timeout(Some(self.timeout))
+            .map_err(|_| SCloudException::SCLOUD_STUB_RESOLVER_FAILED_TO_READ_SOCKET_TIMEOUT)?;
+
+        let bytes = packet.to_bytes()?;
+        socket
+            .send_to(&bytes, self.server)
+            .map_err(|_| SCloudException::SCLOUD_STUB_RESOLVER_FAILED_TO_SEND_TO_SOCKET)?;
+
+        let mut buf = [0u8; 512];
+
+        let mut last_err = None;
+        for attempt in 1..=self.retries {
+            println!("[STUB_RESOLVER] Attempt {}/{}", attempt, self.retries);
+            match socket.recv_from(&mut buf) {
+                Ok((size, _)) => {
+                    let response = DNSPacket::from_bytes(&buf[..size])?;
+
+                    if response.header.id != request_id {
+                        return Err(SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_ID);
+                    }
+
+                    if !response.header.qr {
+                        return Err(SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_RESPONSE);
+                    }
+
+                    return Ok(response);
+                }
+                Err(e) => {
+                    println!("[STUB_RESOLVER] recv_from error: {:?}", e);
+                    if e.kind() == std::io::ErrorKind::WouldBlock  || e.kind() == std::io::ErrorKind::TimedOut {
+                        last_err = Some(e);
+                        continue;
+                    } else {
+                        return Err(SCloudException::SCLOUD_STUB_RESOLVER_FAILED_TO_RECV_FROM_SOCKET);
+                    }
+                }
+            }
+        }
+        Err(SCloudException::SCLOUD_STUB_RESOLVER_FAILED_TO_RECV_FROM_SOCKET)
+
+    }
+}
