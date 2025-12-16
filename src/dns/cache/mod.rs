@@ -1,6 +1,6 @@
-use std::net::IpAddr;
 use crate::dns::q_type::DNSRecordType;
 use crate::dns::records::DNSRecord;
+use std::net::IpAddr;
 
 pub(crate) struct DNSCacheRecord {
     record_type: DNSRecordType,

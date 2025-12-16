@@ -49,6 +49,11 @@ pub enum SCloudException {
     SCLOUD_STUB_RESOLVER_FAILED_TO_READ_SOCKET_TIMEOUT,
     SCLOUD_STUB_RESOLVER_FAILED_TO_SEND_TO_SOCKET,
     SCLOUD_STUB_RESOLVER_FAILED_TO_RECV_FROM_SOCKET,
+
+    // ZONES
+    SCLOUD_ZONE_PARSER_FILE_NOT_FOUND,
+    SCLOUD_ZONE_PARSER_FILE_EMPTY,
+    SCLOUD_ZONE_PARSER_FAILED_TO_READ_ZONE_FILE,
 }
 
 impl SCloudException {
@@ -144,6 +149,15 @@ impl SCloudException {
             }
             SCloudException::SCLOUD_STUB_RESOLVER_FAILED_TO_RECV_FROM_SOCKET => {
                 "[STUB_RESOLVER] Failed to receive from socket."
+            }
+
+            // ZONES
+            SCloudException::SCLOUD_ZONE_PARSER_FILE_NOT_FOUND => {
+                "[ZONE_PARSER] Zone file not found."
+            }
+            SCloudException::SCLOUD_ZONE_PARSER_FILE_EMPTY => "[ZONE_PARSER] Zone file is empty.",
+            SCloudException::SCLOUD_ZONE_PARSER_FAILED_TO_READ_ZONE_FILE => {
+                "[ZONE_PARSER] `zone_parser()` failed to read the zone file."
             }
         }
     }

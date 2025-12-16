@@ -5,7 +5,7 @@ mod tests {
 
     #[test]
     fn test_exceptions_to_str() {
-        let ex_msg_array: [&'static str; 27] = [
+        let ex_msg_array: [&'static str; 30] = [
             // HEADER SECTION
             "Buffer length is less than header length.",
             "The header is empty.",
@@ -42,6 +42,10 @@ mod tests {
             "[STUB_RESOLVER] Failed to read, socket timeout.",
             "[STUB_RESOLVER] Failed to send to socket.",
             "[STUB_RESOLVER] Failed to receive from socket.",
+            // ZONES
+            "[ZONE_PARSER] Zone file not found.",
+            "[ZONE_PARSER] Zone file is empty.",
+            "[ZONE_PARSER] `zone_parser()` failed to read the zone file.",
         ];
 
         let mut i = 0;
@@ -73,7 +77,7 @@ mod tests {
     #[test]
     fn test_exceptions_iter_count() {
         let count = SCloudException::iter().count();
-        let expected_count = 27;
+        let expected_count = 30;
         assert_eq!(count, expected_count);
     }
 

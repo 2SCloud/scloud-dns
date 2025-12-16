@@ -1,10 +1,14 @@
-use std::collections::HashMap;
-use crate::dns::records::DNSRecord;
+pub(crate) mod zone_parser;
 
-#[derive(Debug)]
+use crate::dns::records::DNSRecord;
+use crate::dns::zones::zone_parser::zone_parser;
+use std::collections::HashMap;
+
+#[derive(Debug, PartialEq)]
 pub struct Zone {
-    pub name: String,                               
-    pub ttl: u32,                                   
-    pub soa: Option<DNSRecord>,                        
+    pub origin: Option<String>,
+    pub name: String,
+    pub ttl: u32,
+    pub soa: Option<DNSRecord>,
     pub records: HashMap<String, Vec<DNSRecord>>,
 }

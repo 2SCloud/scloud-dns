@@ -1,9 +1,7 @@
-use crate::dns::packet::DNSPacket;
 use crate::dns::packet::question::QuestionSection;
-use crate::dns::q_type::DNSRecordType;
 use crate::dns::q_class::DNSClass;
+use crate::dns::q_type::DNSRecordType;
 use crate::dns::resolver::stub::StubResolver;
-use std::net::AddrParseError;
 
 mod dns;
 mod exceptions;
