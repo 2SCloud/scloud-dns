@@ -5,7 +5,7 @@ mod tests {
 
     #[test]
     fn test_exceptions_to_str() {
-        let ex_msg_array: [&'static str; 19] = [
+        let ex_msg_array: [&'static str; 27] = [
             // HEADER SECTION
             "Buffer length is less than header length.",
             "The header is empty.",
@@ -32,6 +32,16 @@ mod tests {
             "Impossible to parse the `q_name`, compression 0xC0xx failed.",
             // QTYPE
             "Unknown `q_type`.",
+            // QCLASS
+            "Unknown `q_class`.",
+            "Unknown `q_class`.",
+            // STUB RESOLVER
+            "[STUB_RESOLVER] Invalid DNS ID (difference between `response.header.id` and `request_id`).",
+            "[STUB_RESOLVER] Invalid DNS response.",
+            "[STUB_RESOLVER] Failed to create UDP socket.",
+            "[STUB_RESOLVER] Failed to read, socket timeout.",
+            "[STUB_RESOLVER] Failed to send to socket.",
+            "[STUB_RESOLVER] Failed to receive from socket.",
         ];
 
         let mut i = 0;
@@ -63,7 +73,8 @@ mod tests {
     #[test]
     fn test_exceptions_iter_count() {
         let count = SCloudException::iter().count();
-        assert_eq!(count, 19, "Expected 19 variants of SCloudException");
+        let expected_count = 27;
+        assert_eq!(count, expected_count);
     }
 
     #[test]
