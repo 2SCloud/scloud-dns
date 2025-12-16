@@ -1,16 +1,18 @@
-pub(crate) use crate::dns::records::q_class::DNSClass;
-pub(crate) use crate::dns::records::q_type::DNSRecordType;
+use crate::dns::q_type::DNSRecordType;
 
-pub(crate) mod q_class;
-pub(crate) mod q_name;
-pub(crate) mod q_type;
+#[derive(Debug, Clone)]
+pub(crate) struct DNSRecord {
+    pub name: String,         // ex: www, @, blog
+    pub rtype: DNSRecordType, // type of record
+    pub ttl: u32,             // time to live in seconds
+    pub value: String,        // IP, domain, text, target, etc.
 
-#[derive(Debug)]
-pub struct ResourceRecord {
-    pub name: String,           // domain name
-    pub rr_type: DNSRecordType, // record type
-    pub class: DNSClass,        // record class
-    pub ttl: u32,               // time-to-live
-    pub rdlength: u16,          // length of rdata
-    pub rdata: Vec<u8>,         // resource data
+    // Optional fields depending on type
+    pub priority: Option<u16>,      // MX, SRV
+    pub weight: Option<u16>,        // SRV
+    pub port: Option<u16>,          // SRV
+    pub flags: Option<u8>,          // NAPTR, CAA
+    pub tag: Option<String>,        // CAA
+    pub regex: Option<String>,      // NAPTR
+    pub replacement: Option<String>,// NAPTR
 }

@@ -11,7 +11,8 @@ mod tests {
     use crate::dns::packet::authority::AuthoritySection;
     use crate::dns::packet::header::Header;
     use crate::dns::packet::question::QuestionSection;
-    use crate::dns::records::{DNSClass, DNSRecordType};
+    use crate::dns::q_class::DNSClass;
+    use crate::dns::q_type::DNSRecordType;
 
     #[test]
     fn test_dns_packet_from_bytes() {

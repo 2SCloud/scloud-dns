@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::dns::records::q_name::{parse_qname, parse_qname_at};
+    use crate::dns::q_name::parse_qname;
+    use crate::dns::q_name::parse_qname_at;
     use crate::exceptions::SCloudException;
 
     #[test]

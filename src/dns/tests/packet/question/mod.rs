@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
     use crate::dns::packet::question::QuestionSection;
-    use crate::dns::records::{DNSClass, DNSRecordType};
+    use crate::dns::q_class::DNSClass;
+    use crate::dns::q_type::DNSRecordType;
     use crate::exceptions::SCloudException;
 
     #[test]

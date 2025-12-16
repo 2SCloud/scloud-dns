@@ -1,7 +1,7 @@
 use crate::exceptions::SCloudException;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DNSClass {
+pub(crate) enum DNSClass {
     IN,   // Internet
     CS,   // CSNET (historic)
     CH,   // CHAOS
