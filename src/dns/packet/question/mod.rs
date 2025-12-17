@@ -1,5 +1,6 @@
-use crate::dns::records::q_name::parse_qname;
-use crate::dns::records::{DNSClass, DNSRecordType};
+use crate::dns::q_class::DNSClass;
+use crate::dns::q_name::parse_qname;
+use crate::dns::q_type::DNSRecordType;
 use crate::exceptions::SCloudException;
 
 /// A DNS Question section

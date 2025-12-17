@@ -1,0 +1,90 @@
+$ORIGIN nihilist.moe.
+$TTL 3600
+
+@   IN  SOA ns1.nihilist.moe. admin.nihilist.moe. (
+            2025121601 ; Serial
+            3600       ; Refresh
+            1800       ; Retry
+            604800     ; Expire
+            86400      ; Negative cache TTL
+)
+
+; -------------------------------------------------
+; Name servers
+; -------------------------------------------------
+@       IN  NS  ns1.nihilist.moe.
+@       IN  NS  ns2.nihilist.moe.
+
+ns1     IN  A       192.168.1.10
+ns2     IN  A       192.168.1.11
+ns1     IN  AAAA    fd00::10
+ns2     IN  AAAA    fd00::11
+
+; -------------------------------------------------
+; A / AAAA records
+; -------------------------------------------------
+@       IN  A       192.168.1.20
+@       IN  AAAA    fd00::20
+
+www     IN  A       192.168.1.21
+www     IN  AAAA    fd00::21
+
+api     600 IN  A   192.168.1.22  ; Custom TTL
+
+; -------------------------------------------------
+; CNAME (alias)
+; -------------------------------------------------
+blog    IN  CNAME   www
+shop    IN  CNAME   www.nihilist.moe.
+
+; -------------------------------------------------
+; MX records
+; -------------------------------------------------
+@       IN  MX 10   mail.nihilist.moe.
+@       IN  MX 20   backup-mail.nihilist.moe.
+
+mail            IN  A   192.168.1.30
+backup-mail     IN  A   192.168.1.31
+
+; -------------------------------------------------
+; TXT records
+; -------------------------------------------------
+@   IN  TXT "v=spf1 a mx ~all"
+@   IN  TXT "some random text"
+@   IN  TXT "multi-part" "txt" "record"
+
+; -------------------------------------------------
+; SRV records (used for services like XMPP, SIP, etc.)
+; Format: _service._proto.name TTL class SRV priority weight port target
+; -------------------------------------------------
+_xmpp-server._tcp   IN  SRV 10 5 5269 xmpp.nihilist.moe.
+_xmpp-client._tcp   IN  SRV 10 5 5222 xmpp.nihilist.moe.
+
+xmpp    IN  A   192.168.1.40
+
+; -------------------------------------------------
+; PTR-like test (normally reverse zones, but parser should accept syntax)
+; -------------------------------------------------
+ptrtest IN  PTR example.com.
+
+; -------------------------------------------------
+; CAA records (certificate authority restrictions)
+; -------------------------------------------------
+@   IN  CAA 0 issue "letsencrypt.org"
+@   IN  CAA 0 iodef "mailto:security@nihilist.moe"
+
+; -------------------------------------------------
+; NAPTR records (rare but valid)
+; -------------------------------------------------
+@   IN  NAPTR 100 10 "U" "E2U+sip" "!^.*$!sip:info@nihilist.moe!" .
+
+; -------------------------------------------------
+; Wildcard record
+; -------------------------------------------------
+*   IN  A   192.168.1.99
+
+; -------------------------------------------------
+; Delegation to a sub-zone
+; -------------------------------------------------
+sub     IN  NS  ns.sub.nihilist.moe.
+ns.sub  IN  A   192.168.2.10

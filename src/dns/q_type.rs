@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use strum_macros::EnumIter;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
-pub enum DNSRecordType {
+pub(crate) enum DNSRecordType {
     A,
     AAAA,
     AFSDB,

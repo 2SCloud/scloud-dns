@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::dns::records::DNSClass;
+    use crate::dns::q_class::DNSClass;
 
     #[test]
     fn qclass_to_u16() {

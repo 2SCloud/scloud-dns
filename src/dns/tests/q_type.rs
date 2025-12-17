@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::dns::records::DNSRecordType;
+    use crate::dns::q_type::DNSRecordType;
     use crate::exceptions::SCloudException;
     use strum::IntoEnumIterator;
 

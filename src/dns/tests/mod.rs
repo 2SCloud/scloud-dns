@@ -1,2 +1,5 @@
 mod packet;
-pub mod records;
+pub mod q_class;
+mod q_name;
+mod q_type;
+mod zones;
