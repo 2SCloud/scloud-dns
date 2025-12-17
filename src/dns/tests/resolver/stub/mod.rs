@@ -11,7 +11,20 @@ mod tests{
     use crate::dns::resolver::stub::StubResolver;
 
     #[test]
-    fn test_new_stub_resolver() {
+    fn test_new_stub_resolver(){
+        let result = StubResolver::new("1.1.1.1:53".parse().unwrap());
+        let expected = StubResolver{
+            server: SocketAddr::new("1.1.1.1".parse().unwrap(), 53),
+            timeout: std::time::Duration::from_secs(5),
+            retries: 3,
+        };
+
+        println!("expected: {:?}\ngot: {:?}", expected, result);
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn test_stub_resolve() {
         let result = StubResolver::new("192.0.0.245:53".parse().unwrap())
             .resolve(vec![QuestionSection {
                 q_name: "github.com".to_string(),

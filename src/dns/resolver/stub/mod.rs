@@ -13,8 +13,8 @@ impl StubResolver {
     pub fn new(server: std::net::SocketAddr) -> Self {
         Self {
             server,
-            timeout: std::time::Duration::from_secs(10),
-            retries: 2,
+            timeout: std::time::Duration::from_secs(5),
+            retries: 3,
         }
     }
 
