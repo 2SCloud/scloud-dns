@@ -13,6 +13,7 @@ mod tests {
     use crate::dns::packet::question::QuestionSection;
     use crate::dns::q_class::DNSClass;
     use crate::dns::q_type::DNSRecordType;
+    use crate::dns::resolver::stub::StubResolver;
 
     #[test]
     fn test_dns_packet_from_bytes() {
@@ -205,5 +206,50 @@ mod tests {
 
         println!("expected: {:?}\ngot: {:?}", expected_bytes, result);
         assert_eq!(expected_bytes, result);
+    }
+    
+    #[test]
+    fn test_new_query() {
+
+        let result = DNSPacket::new_query(vec![QuestionSection {
+            q_name: "github.com".to_string(),
+            q_type: DNSRecordType::A,
+            q_class: DNSClass::IN,
+        }]);
+
+        let expected_packet: DNSPacket = DNSPacket{
+            header: Header {
+                id: result.header.id,
+                qr: false,
+                opcode: 0,
+                aa: false,
+                tc: false,
+                rd: true,
+                ra: false,
+                z: 0,
+                rcode: 0,
+                qdcount: 1,
+                ancount: 0,
+                nscount: 0,
+                arcount: 0,
+            },
+            questions: vec![QuestionSection {
+                q_name: "github.com".to_string(),
+                q_type: DNSRecordType::A,
+                q_class: DNSClass::IN,
+            }],
+            answers: vec![],
+            authorities: vec![],
+            additionals: vec![],
+        };
+
+        println!("expected: {:?}\ngot: {:?}", expected_packet,
+                 DNSPacket::new_query(vec![QuestionSection {
+                     q_name: "github.com".to_string(),
+                     q_type: DNSRecordType::A,
+                     q_class: DNSClass::IN,
+                 }])
+        );
+        assert_eq!(expected_packet, result)
     }
 }

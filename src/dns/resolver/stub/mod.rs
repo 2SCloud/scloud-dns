@@ -2,10 +2,11 @@ use crate::dns::packet::DNSPacket;
 use crate::dns::packet::question::QuestionSection;
 use crate::exceptions::SCloudException;
 
+#[derive(Debug, PartialEq)]
 pub struct StubResolver {
-    server: std::net::SocketAddr,
-    timeout: std::time::Duration,
-    retries: u8,
+    pub(crate) server: std::net::SocketAddr,
+    pub(crate) timeout: std::time::Duration,
+    pub(crate) retries: u8,
 }
 
 impl StubResolver {
