@@ -7,6 +7,8 @@ mod tests {
     use crate::dns::q_type::DNSRecordType;
     use crate::dns::resolver::stub::StubResolver;
     use std::net::SocketAddr;
+    use std::path::Path;
+    use crate::config::Config;
     use crate::exceptions::SCloudException;
 
     pub fn resolve_with_fake(
@@ -30,10 +32,11 @@ mod tests {
 
     #[test]
     fn test_new_stub_resolver() {
+        let config = Config::from_file(Path::new("./config/config.json")).unwrap();
         let result = StubResolver::new("1.1.1.1:53".parse().unwrap());
         let expected = StubResolver {
             server: SocketAddr::new("1.1.1.1".parse().unwrap(), 53),
-            timeout: std::time::Duration::from_secs(5),
+            timeout: std::time::Duration::from_secs(config.server.graceful_shutdown_timeout_secs),
             retries: 3,
         };
 
@@ -43,7 +46,7 @@ mod tests {
 
     #[test]
     fn test_stub_resolve() {
-        let result = StubResolver::new("1.1.1.1:53".parse().unwrap())
+        let result = StubResolver::new("192.0.0.245:53".parse().unwrap())
             .resolve(vec![QuestionSection {
                 q_name: "github.com".to_string(),
                 q_type: DNSRecordType::CNAME,
