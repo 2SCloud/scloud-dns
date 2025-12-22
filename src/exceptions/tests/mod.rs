@@ -81,7 +81,7 @@ mod tests {
     #[test]
     fn test_exceptions_iter_count() {
         let count = SCloudException::iter().count();
-        let expected_count = 31;
+        let expected_count = 33;
         assert_eq!(count, expected_count);
     }
 
