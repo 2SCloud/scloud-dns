@@ -57,7 +57,7 @@ impl StubResolver {
 
                     let res = check_answer_diff(&questions, &*response.answers);
 
-                    if res == Ok(true) {
+                    if res.is_ok() {
                         return Ok(response);
                     } else {
                         continue;
