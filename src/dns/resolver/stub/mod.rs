@@ -1,9 +1,10 @@
 use crate::config::Config;
 use crate::dns::packet::DNSPacket;
+use crate::dns::packet::answer::AnswerSection;
 use crate::dns::packet::question::QuestionSection;
+use crate::dns::resolver::check_answer_diff;
 use crate::exceptions::SCloudException;
 use std::path::Path;
-use crate::dns::packet::answer::AnswerSection;
 
 #[derive(Debug, PartialEq)]
 pub struct StubResolver {
@@ -20,27 +21,6 @@ impl StubResolver {
             timeout: std::time::Duration::from_secs(config.server.graceful_shutdown_timeout_secs),
             retries: 3,
         }
-    }
-
-    fn check_answer_diff(questions: &[QuestionSection], answers: &[AnswerSection]) -> Result<bool, SCloudException> {
-        let mut found = false;
-        for question in questions {
-
-            for answer in answers {
-                if answer.q_name == question.q_name
-                    && answer.r_type == question.q_type
-                    && answer.r_class == question.q_class
-                {
-                    found = true;
-                    break;
-                }
-            }
-
-            if !found {
-                return Err(SCloudException::SCLOUD_STUB_RESOLVER_ANSWER_MISMATCH);
-            }
-        }
-        Ok(found)
     }
 
     pub fn resolve(&self, questions: Vec<QuestionSection>) -> Result<DNSPacket, SCloudException> {
@@ -75,8 +55,7 @@ impl StubResolver {
                         return Err(SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_RESPONSE)?;
                     }
 
-                    Self::check_answer_diff(&questions, &*response.answers);
-
+                    check_answer_diff(&questions, &*response.answers);
                 }
                 Err(e) => {
                     println!("[STUB_RESOLVER] recv_from error: {:?}", e);

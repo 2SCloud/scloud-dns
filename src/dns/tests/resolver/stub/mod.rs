@@ -2,6 +2,7 @@
 mod tests {
     use crate::config::Config;
     use crate::dns::packet::DNSPacket;
+    use crate::dns::packet::answer::AnswerSection;
     use crate::dns::packet::header::Header;
     use crate::dns::packet::question::QuestionSection;
     use crate::dns::q_class::DNSClass;
@@ -10,7 +11,6 @@ mod tests {
     use crate::exceptions::SCloudException;
     use std::net::SocketAddr;
     use std::path::Path;
-    use crate::dns::packet::answer::AnswerSection;
 
     pub fn resolve_with_fake(
         stub: StubResolver,
@@ -48,16 +48,14 @@ mod tests {
     #[test]
     fn test_stub_resolve() {
         let config = Config::from_file(Path::new("./config/config.json")).unwrap();
-        let result = StubResolver::new(
-            config
-                .try_get_forwarder_addr_by_name("cloudflare")
-                .unwrap(),
-        ).resolve(vec![QuestionSection {
-            q_name: "github.com".to_string(),
-            q_type: DNSRecordType::CNAME,
-            q_class: DNSClass::IN,
-        }])
-        .unwrap();
+        let result =
+            StubResolver::new(config.try_get_forwarder_addr_by_name("cloudflare").unwrap())
+                .resolve(vec![QuestionSection {
+                    q_name: "github.com".to_string(),
+                    q_type: DNSRecordType::CNAME,
+                    q_class: DNSClass::IN,
+                }])
+                .unwrap();
 
         let expected_packet: DNSPacket = DNSPacket {
             header: Header {
@@ -172,7 +170,7 @@ mod tests {
         };
 
         let questions = vec![question.clone()];
-        
+
         let mut response = DNSPacket {
             header: Header {
                 id: 1234,
@@ -191,7 +189,7 @@ mod tests {
             authorities: vec![],
             additionals: vec![],
         };
-        
+
         let result = (|| {
             for question in &questions {
                 let mut found = false;
@@ -213,7 +211,7 @@ mod tests {
 
             Ok(response)
         })();
-        
+
         assert!(matches!(
             result,
             Err(SCloudException::SCLOUD_STUB_RESOLVER_ANSWER_MISMATCH)
