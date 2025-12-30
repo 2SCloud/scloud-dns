@@ -5,7 +5,6 @@ use crate::dns::packet::header::Header;
 use crate::dns::packet::question::QuestionSection;
 use crate::exceptions::SCloudException;
 use rand::random;
-use std::io::Read;
 
 pub(crate) mod additional;
 pub(crate) mod answer;

@@ -3,7 +3,6 @@ use crate::config::{
     LimitsConfig, ListenerConfig, Protocol, RateLimitConfig, RecursionConfig, ServerConfig,
     ZoneConfig, ZoneType,
 };
-use crate::dns::resolver::stub::StubResolver;
 use serde_json;
 use std::io::Write;
 use std::net::SocketAddr;

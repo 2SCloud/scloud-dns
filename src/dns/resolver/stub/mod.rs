@@ -1,6 +1,5 @@
 use crate::config::Config;
 use crate::dns::packet::DNSPacket;
-use crate::dns::packet::answer::AnswerSection;
 use crate::dns::packet::question::QuestionSection;
 use crate::dns::resolver::{check_additional_diff, check_answer_diff, check_authority_diff};
 use crate::exceptions::SCloudException;
