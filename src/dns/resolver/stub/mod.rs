@@ -55,7 +55,13 @@ impl StubResolver {
                         return Err(SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_RESPONSE)?;
                     }
 
-                    check_answer_diff(&questions, &*response.answers);
+                    let res = check_answer_diff(&questions, &*response.answers);
+
+                    if res == Ok(true) {
+                        return Ok(response);
+                    } else {
+                        continue;
+                    }
                 }
                 Err(e) => {
                     println!("[STUB_RESOLVER] recv_from error: {:?}", e);
