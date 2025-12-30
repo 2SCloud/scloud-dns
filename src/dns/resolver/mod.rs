@@ -37,7 +37,7 @@ pub(crate) fn check_answer_diff(
 
 pub(crate) fn check_authority_diff(
     questions: &[QuestionSection],
-    authorities: &[AuthoritySection]
+    authorities: &[AuthoritySection],
 ) -> Result<(), SCloudException> {
     for record in authorities.iter() {
         for question in questions {
@@ -51,7 +51,7 @@ pub(crate) fn check_authority_diff(
 
 pub(crate) fn check_additional_diff(
     questions: &[QuestionSection],
-    additionals: &[AdditionalSection]
+    additionals: &[AdditionalSection],
 ) -> Result<(), SCloudException> {
     for record in additionals.iter() {
         for question in questions {
