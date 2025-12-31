@@ -2,6 +2,7 @@ use crate::dns::packet::additional::AdditionalSection;
 use crate::dns::packet::answer::AnswerSection;
 use crate::dns::packet::authority::AuthoritySection;
 use crate::dns::packet::question::QuestionSection;
+use crate::dns::q_type::DNSRecordType;
 use crate::exceptions::SCloudException;
 
 pub(crate) mod stub;
@@ -11,9 +12,14 @@ pub(crate) fn check_answer_diff(
     answers: &[AnswerSection],
 ) -> Result<(), SCloudException> {
     for q in questions {
-        let found = answers
-            .iter()
-            .any(|a| a.q_name == q.q_name && a.r_class == q.q_class);
+        let found = answers.iter().any(|a| {
+            a.q_name == q.q_name
+                && a.r_class == q.q_class
+                && (a.r_type == q.q_type
+                || (q.q_type == DNSRecordType::CNAME
+                && (a.r_type == DNSRecordType::A
+                || a.r_type == DNSRecordType::AAAA)))
+        });
 
         if !found {
             return Err(SCloudException::SCLOUD_RESOLVER_ANSWER_MISMATCH);
