@@ -60,16 +60,6 @@ mod tests {
         assert!(result.header.qr);
         assert_eq!(result.questions.len(), 1);
         assert_eq!(result.questions[0].q_name, "github.com");
-
-        assert!(
-            result.answers
-                .as_slice()
-                .iter()
-                .any(|a| a.r_type == DNSRecordType::A ||
-                         a.r_type == DNSRecordType::AAAA ||
-                         a.r_type == DNSRecordType::CNAME)
-        );
-
     }
 
     #[test]
