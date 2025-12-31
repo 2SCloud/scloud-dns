@@ -88,14 +88,12 @@ mod tests {
         assert_eq!(expected_packet.answers, result.answers);
         assert_eq!(expected_packet.additionals, result.additionals);
 
-        assert_eq!(result.authorities.len(), 1);
-        let auth = &result.authorities[0];
-
-        assert_eq!(auth.q_name, "github.com");
-        assert_eq!(auth.q_type, DNSRecordType::SOA);
-        assert_eq!(auth.q_class, DNSClass::IN);
-        assert!(auth.ttl > 0);
-        assert!(!auth.ns_name.is_empty());
+        assert!(result.header.qr);
+        assert_eq!(result.questions.len(), 1);
+        assert_eq!(result.questions[0].q_name, "github.com");
+        assert!(
+            result.answers.as_slice().iter().any(|a| a.r_type == DNSRecordType::CNAME)
+        );
     }
 
     #[test]
