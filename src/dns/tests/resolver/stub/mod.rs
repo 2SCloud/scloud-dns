@@ -62,14 +62,14 @@ mod tests {
         assert_eq!(result.questions[0].q_name, "github.com");
 
         assert!(
-            result
-                .answers
+            result.answers
                 .as_slice()
                 .iter()
-                .any(|a| a.r_type == DNSRecordType::CNAME
-                    || a.r_type == DNSRecordType::A
-                    || a.r_type == DNSRecordType::AAAA)
+                .any(|a| a.r_type == DNSRecordType::A ||
+                         a.r_type == DNSRecordType::AAAA ||
+                         a.r_type == DNSRecordType::CNAME)
         );
+
     }
 
     #[test]
