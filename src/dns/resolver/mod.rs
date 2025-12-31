@@ -16,9 +16,8 @@ pub(crate) fn check_answer_diff(
             a.q_name == q.q_name
                 && a.r_class == q.q_class
                 && (a.r_type == q.q_type
-                || (q.q_type == DNSRecordType::CNAME
-                && (a.r_type == DNSRecordType::A
-                || a.r_type == DNSRecordType::AAAA)))
+                    || (q.q_type == DNSRecordType::CNAME
+                        && (a.r_type == DNSRecordType::A || a.r_type == DNSRecordType::AAAA)))
         });
 
         if !found {
