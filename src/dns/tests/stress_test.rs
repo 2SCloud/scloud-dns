@@ -8,7 +8,7 @@ use crate::dns::q_type::DNSRecordType;
 #[test]
 fn stress_test_stub_resolver() {
     let config = Config::from_file(Path::new("./config/config.json")).unwrap();
-    let resolver = StubResolver::new(config.try_get_forwarder_addr_by_name("sta-internal").unwrap());
+    let resolver = StubResolver::new(config.try_get_forwarder_addr_by_name("cloudflare").unwrap());
 
     let domains = vec![
         "github.com",
