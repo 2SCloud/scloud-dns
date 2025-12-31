@@ -12,13 +12,7 @@ pub(crate) fn check_answer_diff(
     answers: &[AnswerSection],
 ) -> Result<(), SCloudException> {
     for q in questions {
-        let found = answers.iter().any(|a| {
-            a.q_name == q.q_name
-                && a.r_class == q.q_class
-                && (a.r_type == q.q_type
-                    || (q.q_type == DNSRecordType::CNAME
-                        && (a.r_type == DNSRecordType::A || a.r_type == DNSRecordType::AAAA)))
-        });
+        let found = answers.iter().any(|a| a.q_name == q.q_name && a.r_class == q.q_class);
 
         if !found {
             return Err(SCloudException::SCLOUD_RESOLVER_ANSWER_MISMATCH);
@@ -27,6 +21,7 @@ pub(crate) fn check_answer_diff(
 
     Ok(())
 }
+
 
 pub(crate) fn check_authority_diff(
     questions: &[QuestionSection],
