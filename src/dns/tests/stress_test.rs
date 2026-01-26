@@ -1,14 +1,18 @@
-use std::path::Path;
-use std::time::{Instant, Duration};
 use crate::config::Config;
-use crate::dns::resolver::stub::StubResolver;
 use crate::dns::packet::question::QuestionSection;
 use crate::dns::q_type::DNSRecordType;
+use crate::dns::resolver::stub::StubResolver;
+use std::path::Path;
+use std::time::{Duration, Instant};
 
 #[test]
 fn stress_test_stub_resolver() {
     let config = Config::from_file(Path::new("./config/config.json")).unwrap();
-    let resolver = StubResolver::new(config.try_get_forwarder_addr_by_name("cloudflare").unwrap());
+    let resolver = StubResolver::new(
+        config
+            .try_get_forwarder_addr_by_name("sta-internal")
+            .unwrap(),
+    );
 
     let domains = vec![
         "github.com",
@@ -16,13 +20,11 @@ fn stress_test_stub_resolver() {
         "example.com",
         "cloudflare.com",
         "rust-lang.org",
+        "apple.com",
+        "samsung.com",
     ];
 
-    let types = vec![
-        DNSRecordType::A,
-        DNSRecordType::AAAA,
-        DNSRecordType::CNAME,
-    ];
+    let types = vec![DNSRecordType::A, DNSRecordType::AAAA, DNSRecordType::CNAME];
 
     let total_queries = 10500;
     let mut success_count = 0;
@@ -48,11 +50,14 @@ fn stress_test_stub_resolver() {
         match result {
             Ok(packet) => {
                 success_count += 1;
-                println!("[{}] Success {} ({:?})", i, domain, duration);
+                println!(
+                    "[{}][{:?}] Success {} ({:?})",
+                    i, record_type, domain, duration
+                );
             }
             Err(e) => {
                 failure_count += 1;
-                println!("[{}] Failed {}: {:?}", i, domain, e);
+                println!("[{}][{:?}] Failed {}: {:?}", i, record_type, domain, e);
             }
         }
     }
@@ -63,6 +68,9 @@ fn stress_test_stub_resolver() {
     println!("Total queries: {}", total_queries);
     println!("Success: {}", success_count);
     println!("Failures: {}", failure_count);
-    println!("Average latency: {:?}", total_duration / total_queries as u32);
+    println!(
+        "Average latency: {:?}",
+        total_duration / total_queries as u32
+    );
     println!("Total test duration: {:?}", overall_duration);
 }
