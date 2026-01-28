@@ -100,6 +100,7 @@ impl Zone {
     ///     assert!(!records.is_empty());
     /// }
     /// ```
+    #[allow(unused)]
     pub fn get_records(&self, name: &str) -> Option<&Vec<DNSRecord>> {
         self.records.get(name)
     }

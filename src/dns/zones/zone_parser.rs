@@ -134,7 +134,7 @@ pub fn zone_parser(qname: &str) -> Result<Zone, SCloudException> {
             _ => continue,
         };
 
-        let mut value_parts: Vec<&str> = parts.collect();
+        let value_parts: Vec<&str> = parts.collect();
 
         let value_str = if rtype == DNSRecordType::TXT {
             value_parts.join(" ")

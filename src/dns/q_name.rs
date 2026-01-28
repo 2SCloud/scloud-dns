@@ -28,7 +28,7 @@ use crate::exceptions::SCloudException;
 ///   (e.g. 12 for the first QNAME in a DNS packet).
 pub(crate) fn parse_qname(buf: &[u8], mut pos: usize) -> Result<(String, usize), SCloudException> {
     let mut labels = Vec::new();
-    let mut jumped = false;
+    let mut _jumped = false;
     let mut end_pos = pos;
 
     loop {
@@ -46,11 +46,11 @@ pub(crate) fn parse_qname(buf: &[u8], mut pos: usize) -> Result<(String, usize),
 
             let offset = (((len as u16 & 0x3F) << 8) | buf[pos + 1] as u16) as usize;
 
-            if !jumped {
+            if !_jumped {
                 end_pos = pos + 2;
             }
 
-            jumped = true;
+            _jumped = true;
 
             let (name, _) = parse_qname(buf, offset)?;
             labels.extend(name.split('.').map(|s| s.to_string()));
@@ -58,7 +58,7 @@ pub(crate) fn parse_qname(buf: &[u8], mut pos: usize) -> Result<(String, usize),
         }
 
         if len == 0 {
-            if !jumped {
+            if !_jumped {
                 end_pos = pos + 1;
             }
             break;

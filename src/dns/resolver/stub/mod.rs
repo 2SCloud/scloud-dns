@@ -93,7 +93,7 @@ impl StubResolver {
 
         let mut buf = [0u8; 512];
 
-        let mut last_err = None;
+        let mut _last_err = None;
         for attempt in 1..=self.retries {
             println!("[STUB_RESOLVER] Attempt {}/{}", attempt, self.retries);
             match socket.recv_from(&mut buf) {
@@ -124,7 +124,7 @@ impl StubResolver {
                     if e.kind() == std::io::ErrorKind::WouldBlock
                         || e.kind() == std::io::ErrorKind::TimedOut
                     {
-                        last_err = Some(e);
+                        _last_err = Some(e);
                         continue;
                     } else {
                         return Err(

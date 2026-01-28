@@ -64,7 +64,7 @@ mod tests {
 
     #[test]
     fn test_force_invalid_id() {
-        let mut packet = DNSPacket::new_query(&[]);
+        let packet = DNSPacket::new_query(&[]);
         let request_id = packet.header.id;
 
         let invalid_id_packet = DNSPacket {
@@ -94,7 +94,7 @@ mod tests {
 
     #[test]
     fn test_force_invalid_response() {
-        let mut packet = DNSPacket::new_query(&[]);
+        let packet = DNSPacket::new_query(&[]);
         let request_id = 42;
 
         let invalid_qr_packet = DNSPacket {
@@ -135,7 +135,7 @@ mod tests {
 
         let questions = vec![question.clone()];
 
-        let mut response = DNSPacket {
+        let response = DNSPacket {
             header: Header {
                 id: 1234,
                 qr: true,

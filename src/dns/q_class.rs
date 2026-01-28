@@ -55,6 +55,7 @@ impl TryFrom<DNSClass> for u16 {
     /// This error should never occur unless an invalid enum variant
     /// is introduced.
     fn try_from(c: DNSClass) -> Result<u16, Self::Error> {
+        #[allow(unreachable_patterns)]
         match c {
             DNSClass::NONE => Ok(0),
             DNSClass::IN => Ok(1),

@@ -1,3 +1,4 @@
+mod stress_test;
 pub(crate) mod stub;
 
 use crate::dns::packet::additional::AdditionalSection;
@@ -90,6 +91,7 @@ pub(crate) fn check_answer_diff(
 ///
 /// assert!(check_authority_diff(&questions, &authorities).is_ok());
 /// ```
+#[allow(unused)]
 pub(crate) fn check_authority_diff(
     questions: &[QuestionSection],
     authorities: &[AuthoritySection],
@@ -131,6 +133,7 @@ pub(crate) fn check_authority_diff(
 ///
 /// assert!(check_additional_diff(&questions, &additionals).is_ok());
 /// ```
+#[allow(unused)]
 pub(crate) fn check_additional_diff(
     questions: &[QuestionSection],
     additionals: &[AdditionalSection],
