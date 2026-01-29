@@ -13,7 +13,6 @@ mod tests {
     use crate::dns::packet::question::QuestionSection;
     use crate::dns::q_class::DNSClass;
     use crate::dns::q_type::DNSRecordType;
-    use crate::dns::resolver::stub::StubResolver;
 
     #[test]
     fn test_dns_packet_from_bytes() {

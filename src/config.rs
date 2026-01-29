@@ -97,6 +97,7 @@ impl Config {
     }
 
     /// Basic validation hook — extend with more checks as needed
+    #[allow(unused)]
     pub fn validate(&self) -> Result<()> {
         // Example checks:
         // - ensure no duplicate zone names
@@ -107,6 +108,7 @@ impl Config {
     }
 
     /// Get the address of a specific forwarder by index value
+    #[allow(unused)]
     pub(crate) fn try_get_forwarder_addr_by_index(
         &self,
         forwarder_index: usize,

@@ -22,7 +22,7 @@ mod tests {
 
     #[test]
     fn test_authority_rdata_out_of_bounds() {
-        let mut buf: Vec<u8> = vec![
+        let buf: Vec<u8> = vec![
             0x03, b'f', b'o', b'o', 0x00, 0x00, 0x02, 0x00, 0x01, 0x00, 0x00, 0x00, 0x3C, 0x00,
             0x10, 0x03, b'n', b's', b'1',
         ];

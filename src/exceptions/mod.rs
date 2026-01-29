@@ -69,6 +69,7 @@ pub enum SCloudException {
 }
 
 impl SCloudException {
+    #[allow(unused)]
     pub(crate) fn to_str(&self) -> &'static str {
         match self {
             //HEADER SECTION

@@ -8,6 +8,7 @@ use std::path::Path;
 mod config;
 mod dns;
 mod exceptions;
+mod threads;
 mod utils;
 
 fn main() {

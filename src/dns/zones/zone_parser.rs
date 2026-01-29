@@ -39,6 +39,7 @@ use std::io::{self, BufRead};
 /// assert!(zone.soa.is_some());
 /// assert!(!zone.records.is_empty());
 /// ```
+#[allow(unused)]
 pub fn zone_parser(qname: &str) -> Result<Zone, SCloudException> {
     let filename = format!("zones/{}.zone", qname);
     let file =
@@ -134,7 +135,7 @@ pub fn zone_parser(qname: &str) -> Result<Zone, SCloudException> {
             _ => continue,
         };
 
-        let mut value_parts: Vec<&str> = parts.collect();
+        let value_parts: Vec<&str> = parts.collect();
 
         let value_str = if rtype == DNSRecordType::TXT {
             value_parts.join(" ")
