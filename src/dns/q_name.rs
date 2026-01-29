@@ -86,6 +86,7 @@ pub(crate) fn parse_qname(buf: &[u8], mut pos: usize) -> Result<(String, usize),
 /// Parse a DNS QNAME at a specific offset and return only the name.
 ///
 /// This is mainly used internally when resolving compression pointers.
+#[allow(unused)]
 pub(crate) fn parse_qname_at(buf: &[u8], offset: usize) -> Result<String, SCloudException> {
     let (name, _consumed) = parse_qname(&buf, offset)?;
     Ok(name)

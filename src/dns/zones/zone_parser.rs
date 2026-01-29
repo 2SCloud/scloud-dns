@@ -39,6 +39,7 @@ use std::io::{self, BufRead};
 /// assert!(zone.soa.is_some());
 /// assert!(!zone.records.is_empty());
 /// ```
+#[allow(unused)]
 pub fn zone_parser(qname: &str) -> Result<Zone, SCloudException> {
     let filename = format!("zones/{}.zone", qname);
     let file =

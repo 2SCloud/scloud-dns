@@ -1,4 +1,3 @@
-mod stress_test;
 pub(crate) mod stub;
 
 use crate::dns::packet::additional::AdditionalSection;
