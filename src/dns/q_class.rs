@@ -15,7 +15,7 @@ use crate::exceptions::SCloudException;
 ///
 /// The enum supports conversion to and from the on-the-wire `u16`
 /// representation used in DNS packets.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
 pub(crate) enum DNSClass {
     IN,
     CS,
