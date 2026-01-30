@@ -38,10 +38,8 @@ pub(crate) mod imp {
                     PriorityScope::PROCESS => (libc::PRIO_PROCESS, getpid().as_raw() as libc::id_t),
                     PriorityScope::USER => (libc::PRIO_USER, getuid().as_raw() as libc::id_t),
                     PriorityScope::PROCESS_GROUP => {
-                        let pgid = getpgid(None).map_err(|e| match e.as_errno() {
-                            Some(errno) => io::Error::from_raw_os_error(errno as i32),
-                            None => io::Error::new(io::ErrorKind::Other, e.to_string()),
-                        })?;
+                        let pgid = getpgid(None)
+                            .map_err(|e| io::Error::from_raw_os_error(e as i32))?;
                         (libc::PRIO_PGRP, pgid.as_raw() as libc::id_t)
                     }
 

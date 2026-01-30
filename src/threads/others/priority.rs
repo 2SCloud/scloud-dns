@@ -1,5 +1,5 @@
 mod imp {
-    use super::{PriorityScope, ThreadPriority};
+    use crate::threads::{PriorityScope, ThreadPriority};
     use std::io;
 
     pub(crate) fn set_priority(_: PriorityScope, _: ThreadPriority) -> io::Result<()> {
