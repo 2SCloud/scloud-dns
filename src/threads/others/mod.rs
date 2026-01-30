@@ -1,7 +1,7 @@
-mod priority;
+pub(crate) mod priority;
 
 mod imp {
-    use super::SpawnConfig;
+    use super::super::SpawnConfig;
 
     pub fn new<F, T>(_: SpawnConfig<'_>, f: F) -> std::thread::JoinHandle<T>
     where

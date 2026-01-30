@@ -1,7 +1,6 @@
 pub(crate) mod imp {
     use nix::unistd::{getpgid, getpid, getuid};
     use std::io;
-
     use crate::threads::{PriorityScope, ThreadPriority};
 
     pub(crate) fn set_priority(scope: PriorityScope, p: ThreadPriority) -> io::Result<()> {
