@@ -18,7 +18,7 @@ use strum_macros::EnumIter;
 ///
 /// This guarantees that the resolver does not break when encountering
 /// newer or unsupported DNS record types.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq, EnumIter)]
 pub(crate) enum DNSRecordType {
     A,
     AAAA,
