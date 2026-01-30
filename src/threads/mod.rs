@@ -46,6 +46,7 @@ pub(crate) struct ScloudWorker {
     pub(crate) max_buffer_budget_bytes: usize,
 }
 
+#[allow(unused)]
 impl ScloudWorker {
     pub(crate) fn new(worker_type: WorkerType) -> Self {
         Self {
@@ -71,7 +72,7 @@ impl ScloudWorker {
 
 #[allow(unused)]
 #[allow(non_camel_case_types)]
-#[derive(Debug, Copy, Clone, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum WorkerType {
     Listener,
     Decoder,
@@ -91,7 +92,7 @@ pub enum WorkerType {
 
 #[allow(unused)]
 #[allow(non_camel_case_types)]
-#[derive(Debug, Copy, Clone, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ThreadPriority {
     IDLE,
     LOW,
@@ -104,7 +105,7 @@ pub enum ThreadPriority {
 
 #[allow(unused)]
 #[allow(non_camel_case_types)]
-#[derive(Debug, Copy, Clone, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum PriorityScope {
     THREAD,
     PROCESS,
