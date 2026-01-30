@@ -1,84 +1,80 @@
-#[allow(unused)]
-#[derive(Debug, Copy, Clone)]
-pub enum ThreadPriority {
-    Idle,
-    Low,
-    Normal,
-    High,
-    Realtime,
-}
-
-#[allow(unused)]
-pub fn set_current_thread_priority(p: ThreadPriority) -> std::io::Result<()> {
-    imp::set_current_thread_priority(p)
-}
+#[cfg(windows)]
+mod windows;
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(not(any(windows, target_os = "linux")))]
+mod others;
 
 #[cfg(windows)]
-mod imp {
-    use super::ThreadPriority;
-    use std::io;
-
-    use winapi::shared::minwindef::FALSE;
-    use winapi::um::processthreadsapi::{GetCurrentThread, SetThreadPriority};
-    use winapi::um::winbase::{
-        THREAD_PRIORITY_BELOW_NORMAL, THREAD_PRIORITY_HIGHEST, THREAD_PRIORITY_IDLE,
-        THREAD_PRIORITY_NORMAL, THREAD_PRIORITY_TIME_CRITICAL,
-    };
-
-    pub fn set_current_thread_priority(p: ThreadPriority) -> io::Result<()> {
-        let prio = match p {
-            ThreadPriority::Idle => THREAD_PRIORITY_IDLE,
-            ThreadPriority::Low => THREAD_PRIORITY_BELOW_NORMAL,
-            ThreadPriority::Normal => THREAD_PRIORITY_NORMAL,
-            ThreadPriority::High => THREAD_PRIORITY_HIGHEST,
-            ThreadPriority::Realtime => THREAD_PRIORITY_TIME_CRITICAL,
-        };
-
-        let ok = unsafe { SetThreadPriority(GetCurrentThread(), prio.try_into().unwrap()) };
-        if ok == FALSE {
-            Err(io::Error::last_os_error())
-        } else {
-            Ok(())
-        }
-    }
+mod thread {
+    pub(crate) use crate::threads::windows::priority::imp as priority;
+    pub(crate) use crate::threads::windows::imp as thread_base;
 }
 
 #[cfg(target_os = "linux")]
-mod imp {
-    use super::ThreadPriority;
-    use nix::unistd::gettid;
-    use std::io;
+mod thread {
+    pub(crate) use crate::threads::linux::priority::imp as priority;
+    pub(crate) use crate::threads::linux::imp as thread_base;
+}
 
-    pub fn set_current_thread_priority(p: ThreadPriority) -> io::Result<()> {
-        let nice: i32 = match p {
-            ThreadPriority::Idle => 19,
-            ThreadPriority::Low => 10,
-            ThreadPriority::Normal => 0,
-            ThreadPriority::High => -10,
-            ThreadPriority::Realtime => -20,
-        };
+#[cfg(target_os = "macos")]
+mod thread {
+    pub(crate) use crate::threads::macos::priority::imp as priority;
+    pub(crate) use crate::threads::macos::imp as thread_base;
+}
 
-        let tid = gettid().as_raw() as libc::id_t;
-        
-        let rc = unsafe { libc::setpriority(libc::PRIO_PROCESS, tid, nice) };
-        if rc == -1 {
-            return Err(io::Error::last_os_error());
-        }
+#[cfg(not(any(windows, target_os = "linux", target_os= "macos")))]
+mod thread {
+    pub(crate) use crate::threads::others::priority::imp as priority;
+    pub(crate) use crate::threads::others::imp as thread_base;
+}
 
-        Ok(())
+#[allow(unused)]
+#[allow(non_camel_case_types)]
+#[derive(Debug, Copy, Clone)]
+pub enum ThreadPriority {
+    IDLE,
+    LOW,
+    BELOW_NORMAL,
+    NORMAL,
+    ABOVE_NORMAL,
+    HIGH,
+    REALTIME,
+}
+
+#[allow(unused)]
+#[allow(non_camel_case_types)]
+#[derive(Debug, Copy, Clone)]
+pub enum PriorityScope {
+    THREAD,
+    PROCESS,
+    USER,
+    PROCESS_GROUP,
+}
+
+pub struct SpawnConfig<'a> {
+    pub name: Option<&'a str>,
+    pub stack_size: Option<usize>,
+}
+
+impl<'a> Default for SpawnConfig<'a> {
+    fn default() -> Self {
+        Self { name: None, stack_size: None }
     }
 }
 
+#[allow(unused)]
+pub fn new<F, T>(cfg: SpawnConfig<'_>, f: F) -> std::thread::JoinHandle<T>
+where
+    F: FnOnce() -> T + Send + 'static,
+    T: Send + 'static,
+{
+    thread::thread_base::new(cfg, f)
+}
 
-#[cfg(not(any(windows, target_os = "linux")))]
-mod imp {
-    use super::ThreadPriority;
-    use std::io;
-
-    pub fn set_current_thread_priority(_: ThreadPriority) -> io::Result<()> {
-        Err(io::Error::new(
-            io::ErrorKind::Unsupported,
-            "Thread priority not supported on this OS",
-        ))
-    }
+#[allow(unused)]
+pub fn set_priority(scope: PriorityScope, p: ThreadPriority) -> std::io::Result<()> {
+    thread::priority::set_priority(scope, p)
 }
