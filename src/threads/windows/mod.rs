@@ -19,4 +19,3 @@ pub(crate) mod imp {
         b.spawn(f).expect("failed to spawn thread")
     }
 }
-

@@ -1,8 +1,8 @@
 #![allow(unused)]
 #![allow(non_camel_case_types)]
 
-use std::io;
 use nix::unistd::{getpgid, getpid, getuid};
+use std::io;
 
 use crate::threads::{ClassPriority, PriorityScope, ThreadPriority};
 
@@ -18,13 +18,16 @@ pub(crate) mod imp {
     const QOS_CLASS_USER_INTERACTIVE: qos_class_t = 0x21;
 
     unsafe extern "C" {
-        fn pthread_set_qos_class_self_np(qos_class: qos_class_t, relative_priority: c_int) -> c_int;
+        fn pthread_set_qos_class_self_np(qos_class: qos_class_t, relative_priority: c_int)
+        -> c_int;
     }
 
     pub(crate) fn set_priority(scope: PriorityScope, p: ThreadPriority) -> io::Result<()> {
         match scope {
             PriorityScope::THREAD => set_thread_priority(p),
-            PriorityScope::PROCESS => set_nice(libc::PRIO_PROCESS, getpid().as_raw() as libc::id_t, p),
+            PriorityScope::PROCESS => {
+                set_nice(libc::PRIO_PROCESS, getpid().as_raw() as libc::id_t, p)
+            }
             PriorityScope::USER => set_nice(libc::PRIO_USER, getuid().as_raw() as libc::id_t, p),
             PriorityScope::PROCESS_GROUP => {
                 let pgid = getpgid(None).map_err(nix_to_io)?;
@@ -46,8 +49,10 @@ pub(crate) mod imp {
     }
 
     fn set_thread_priority(p: ThreadPriority) -> io::Result<()> {
-
-        let want_bg = matches!(p, ThreadPriority::IDLE | ThreadPriority::LOW | ThreadPriority::BELOW_NORMAL);
+        let want_bg = matches!(
+            p,
+            ThreadPriority::IDLE | ThreadPriority::LOW | ThreadPriority::BELOW_NORMAL
+        );
 
         let which = libc::PRIO_DARWIN_THREAD;
         let who: libc::id_t = 0; // current thread

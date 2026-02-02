@@ -1,7 +1,7 @@
 pub(crate) mod imp {
+    use crate::threads::{ClassPriority, PriorityScope, ThreadPriority};
     use nix::unistd::{getpgid, getpid, gettid, getuid};
     use std::io;
-    use crate::threads::{ClassPriority, PriorityScope, ThreadPriority};
 
     pub(crate) fn set_priority(scope: PriorityScope, p: ThreadPriority) -> io::Result<()> {
         let nice: i32 = match p {

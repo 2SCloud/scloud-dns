@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicU64, AtomicU8, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU8, AtomicU64, AtomicUsize, Ordering};
 
 #[cfg(windows)]
 mod windows;
@@ -14,26 +14,26 @@ mod others;
 
 #[cfg(windows)]
 mod thread {
-    pub(crate) use crate::threads::windows::priority::imp as priority;
     pub(crate) use crate::threads::windows::imp as thread_base;
+    pub(crate) use crate::threads::windows::priority::imp as priority;
 }
 
 #[cfg(target_os = "linux")]
 mod thread {
-    pub(crate) use crate::threads::linux::priority::imp as priority;
     pub(crate) use crate::threads::linux::imp as thread_base;
+    pub(crate) use crate::threads::linux::priority::imp as priority;
 }
 
 #[cfg(target_os = "macos")]
 mod thread {
-    pub(crate) use crate::threads::macos::priority::imp as priority;
     pub(crate) use crate::threads::macos::imp as thread_base;
+    pub(crate) use crate::threads::macos::priority::imp as priority;
 }
 
 #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 mod thread {
-    pub(crate) use crate::threads::others::priority::imp as priority;
     pub(crate) use crate::threads::others::imp as thread_base;
+    pub(crate) use crate::threads::others::priority::imp as priority;
 }
 
 #[allow(unused)]
@@ -150,7 +150,10 @@ impl ScloudWorker {
             return Ok(false);
         }
 
-        set_priority(PriorityScope::from_u8(scope_u8), ThreadPriority::from_u8(prio_u8))?;
+        set_priority(
+            PriorityScope::from_u8(scope_u8),
+            ThreadPriority::from_u8(prio_u8),
+        )?;
 
         self.last_applied_scope.store(scope_u8, Ordering::Relaxed);
         self.last_applied_priority.store(prio_u8, Ordering::Relaxed);
