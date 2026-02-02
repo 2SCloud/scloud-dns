@@ -1,8 +1,8 @@
 use crate::dns::q_type::DNSRecordType;
 use crate::dns::records::DNSRecord;
 
-use std::time::Instant;
 use crate::dns::q_class::DNSClass;
+use std::time::Instant;
 
 // TODO: light LRU system
 // Should make a real LRU system for v2 (handle millions of entries)

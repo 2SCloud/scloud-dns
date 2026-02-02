@@ -1,7 +1,7 @@
 pub(crate) mod imp {
+    use crate::threads::{ClassPriority, PriorityScope, ThreadPriority};
     use nix::unistd::{getpgid, getpid, gettid, getuid};
     use std::io;
-    use crate::threads::{PriorityScope, ThreadPriority};
 
     pub(crate) fn set_priority(scope: PriorityScope, p: ThreadPriority) -> io::Result<()> {
         let nice: i32 = match p {
@@ -19,12 +19,42 @@ pub(crate) mod imp {
             PriorityScope::PROCESS => (libc::PRIO_PROCESS, getpid().as_raw() as libc::id_t),
             PriorityScope::USER => (libc::PRIO_USER, getuid().as_raw() as libc::id_t),
             PriorityScope::PROCESS_GROUP => {
-                let pgid = getpgid(None).map_err(|e| io::Error::from_raw_os_error(e as i32))?;
+                let pgid = getpgid(None).map_err(nix_to_io)?;
                 (libc::PRIO_PGRP, pgid.as_raw() as libc::id_t)
             }
         };
 
         let rc = unsafe { libc::setpriority(which, who, nice) };
+        if rc == -1 {
+            Err(io::Error::last_os_error())
+        } else {
+            Ok(())
+        }
+    }
+
+    pub(crate) fn set_class_priority(p: ClassPriority) -> io::Result<()> {
+        let nice = p.to_unix_nice();
+        let pid: libc::id_t = getpid().as_raw() as libc::id_t;
+
+        let rc = unsafe { libc::setpriority(libc::PRIO_PROCESS, pid, nice) };
+        if rc == -1 {
+            Err(io::Error::last_os_error())
+        } else {
+            Ok(())
+        }
+    }
+
+    // TODO: change to ScloudException
+    fn nix_to_io(e: nix::errno::Errno) -> io::Error {
+        io::Error::from_raw_os_error(e as i32)
+    }
+
+    fn apply_unix_nice(priority_class: ClassPriority) -> io::Result<()> {
+        let nice = priority_class.to_unix_nice();
+
+        let pid: libc::id_t = unsafe { libc::getpid() } as libc::id_t;
+        let rc = unsafe { libc::setpriority(libc::PRIO_PROCESS, pid, nice) };
+
         if rc == -1 {
             Err(io::Error::last_os_error())
         } else {
