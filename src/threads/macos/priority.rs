@@ -4,11 +4,22 @@
 use std::io;
 use nix::unistd::{getpgid, getpid, getuid};
 
-use crate::threads::{PriorityScope, ThreadPriority};
+use crate::threads::{ClassPriority, PriorityScope, ThreadPriority};
 
 pub(crate) mod imp {
     use super::*;
     use std::ffi::c_int;
+
+    type qos_class_t = u32;
+    const QOS_CLASS_BACKGROUND: qos_class_t = 0x09;
+    const QOS_CLASS_UTILITY: qos_class_t = 0x11;
+    const QOS_CLASS_DEFAULT: qos_class_t = 0x15;
+    const QOS_CLASS_USER_INITIATED: qos_class_t = 0x19;
+    const QOS_CLASS_USER_INTERACTIVE: qos_class_t = 0x21;
+
+    unsafe extern "C" {
+        fn pthread_set_qos_class_self_np(qos_class: qos_class_t, relative_priority: c_int) -> c_int;
+    }
 
     pub(crate) fn set_priority(scope: PriorityScope, p: ThreadPriority) -> io::Result<()> {
         match scope {
@@ -22,11 +33,24 @@ pub(crate) mod imp {
         }
     }
 
+    pub(crate) fn set_class_priority(p: ClassPriority) -> io::Result<()> {
+        let nice = p.to_unix_nice();
+        let pid: libc::id_t = getpid().as_raw() as libc::id_t;
+
+        let rc = unsafe { libc::setpriority(libc::PRIO_PROCESS, pid, nice) };
+        if rc == -1 {
+            Err(io::Error::last_os_error())
+        } else {
+            Ok(())
+        }
+    }
+
     fn set_thread_priority(p: ThreadPriority) -> io::Result<()> {
+
         let want_bg = matches!(p, ThreadPriority::IDLE | ThreadPriority::LOW | ThreadPriority::BELOW_NORMAL);
 
         let which = libc::PRIO_DARWIN_THREAD;
-        let who: libc::id_t = 0;
+        let who: libc::id_t = 0; // current thread
         let prio: c_int = if want_bg { libc::PRIO_DARWIN_BG } else { 0 };
 
         let rc = unsafe { libc::setpriority(which, who, prio) };
@@ -48,35 +72,19 @@ pub(crate) mod imp {
         Ok(())
     }
 
-    pub(crate) fn set_class_priority(p: ClassPriority) -> io::Result<()> {
-        let nice = p.to_unix_nice();
-        let pid: libc::id_t = getpid().as_raw() as libc::id_t;
-
-        let rc = unsafe { libc::setpriority(libc::PRIO_PROCESS, pid, nice) };
-        if rc == -1 {
-            Err(io::Error::last_os_error())
-        } else {
-            Ok(())
-        }
-    }
-
     fn apply_qos_for_priority(p: ThreadPriority) -> io::Result<()> {
         let (qos_class, rel_prio) = match p {
-            ThreadPriority::NORMAL => (libc::QOS_CLASS_DEFAULT, 0),
-            ThreadPriority::ABOVE_NORMAL => (libc::QOS_CLASS_USER_INITIATED, 0),
-            ThreadPriority::HIGH => (libc::QOS_CLASS_USER_INTERACTIVE, 0),
-            ThreadPriority::REALTIME => (libc::QOS_CLASS_USER_INTERACTIVE, 0),
+            ThreadPriority::NORMAL => (QOS_CLASS_DEFAULT, 0),
+            ThreadPriority::ABOVE_NORMAL => (QOS_CLASS_USER_INITIATED, 0),
+            ThreadPriority::HIGH => (QOS_CLASS_USER_INTERACTIVE, 0),
+            ThreadPriority::REALTIME => (QOS_CLASS_USER_INTERACTIVE, 0),
 
-            ThreadPriority::IDLE => (libc::QOS_CLASS_BACKGROUND, 0),
-            ThreadPriority::LOW => (libc::QOS_CLASS_UTILITY, 0),
-            ThreadPriority::BELOW_NORMAL => (libc::QOS_CLASS_UTILITY, 0),
+            ThreadPriority::IDLE => (QOS_CLASS_BACKGROUND, 0),
+            ThreadPriority::LOW => (QOS_CLASS_UTILITY, 0),
+            ThreadPriority::BELOW_NORMAL => (QOS_CLASS_UTILITY, 0),
         };
 
-        extern "C" {
-            fn pthread_set_qos_class_self_np(qos_class: u32, relative_priority: c_int) -> c_int;
-        }
-
-        let rc = unsafe { pthread_set_qos_class_self_np(qos_class as u32, rel_prio) };
+        let rc = unsafe { pthread_set_qos_class_self_np(qos_class, rel_prio) };
         if rc != 0 {
             return Err(io::Error::from_raw_os_error(rc));
         }
@@ -91,7 +99,7 @@ pub(crate) mod imp {
             ThreadPriority::NORMAL => 0,
             ThreadPriority::ABOVE_NORMAL => -5,
             ThreadPriority::HIGH => -10,
-            ThreadPriority::REALTIME => -20, // NOT true realtime; best-effort timesharing.
+            ThreadPriority::REALTIME => -20, // best-effort timesharing NOT true RT
         };
 
         let rc = unsafe { libc::setpriority(which, who, nice) };
@@ -102,11 +110,9 @@ pub(crate) mod imp {
         }
     }
 
-    fn nix_to_io(e: nix::Error) -> io::Error {
-        match e {
-            nix::Error::Sys(errno) => io::Error::from_raw_os_error(errno as i32),
-            other => io::Error::new(io::ErrorKind::Other, other.to_string()),
-        }
+    #[inline]
+    fn nix_to_io(e: nix::errno::Errno) -> io::Error {
+        io::Error::from_raw_os_error(e as i32)
     }
 
     #[cfg(feature = "mach-rt")]
@@ -126,7 +132,7 @@ pub(crate) mod imp {
             preemptible: i32,
         }
 
-        extern "C" {
+        unsafe extern "C" {
             fn mach_thread_self() -> thread_act_t;
             fn thread_policy_set(
                 thread: thread_act_t,
@@ -139,7 +145,6 @@ pub(crate) mod imp {
             fn mach_task_self() -> u32;
         }
 
-        // Placeholder values (tune for workload). Feature-gated for safety.
         let policy = thread_time_constraint_policy {
             period: 5_000_000,
             computation: 1_000_000,
