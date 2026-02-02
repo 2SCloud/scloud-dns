@@ -45,11 +45,8 @@ pub(crate) mod imp {
     }
 
     // TODO: change to ScloudException
-    fn nix_to_io(e: nix::Error) -> io::Error {
-        match e {
-            nix::Error::Sys(errno) => io::Error::from_raw_os_error(errno as i32),
-            other => io::Error::new(io::ErrorKind::Other, other.to_string()),
-        }
+    fn nix_to_io(e: nix::errno::Errno) -> io::Error {
+        io::Error::from_raw_os_error(e as i32)
     }
 
     fn apply_unix_nice(priority_class: ClassPriority) -> io::Result<()> {
