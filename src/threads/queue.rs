@@ -3,9 +3,9 @@ use futures_util::StreamExt;
 use lapin::{
     options::*,
     types::FieldTable,
-    BasicProperties, Channel, Connection, ConnectionProperties,
+    BasicProperties, Connection
 };
-use uuid::Uuid;
+use crate::threads::task::ScloudWorkerTask;
 
 pub async fn send_task_and_wait(
     conn: &Connection,
