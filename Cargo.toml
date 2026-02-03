@@ -6,18 +6,28 @@ edition = "2024"
 [dependencies]
 strum = "0.26"
 strum_macros = "0.26"
+
 rand = "0.9.2"
 anyhow = "1.0.100"
+
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
+
 tempfile = "3.23.0"
 
 nix = { version = "0.31.1", features = ["process", "user"] }
 libc = "0.2.180"
 winapi = "0.3.9"
+
 uuid = { version = "1.20.0", features = ["v4", "serde"] }
+
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-lapin = { version = "2.5.5", features = ["rustls"] }
+tokio-amqp = "2.0"
+
+lapin = { version = "=3.7.2", features = ["rustls"] }
+tokio-executor-trait = "3"
+tokio-reactor-trait = "4"
+
 futures-util = "0.3"
 
 [target.'cfg(windows)'.dependencies]

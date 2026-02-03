@@ -6,8 +6,8 @@ pub async fn connect() -> Result<Connection> {
         .unwrap_or_else(|_| "amqp://guest:guest@localhost:5672/%2f".into());
 
     let props = ConnectionProperties::default()
-        .with_executor(lapin::executor::TokioExecutor::current())
-        .with_reactor(lapin::reactor::TokioReactor);
+        .with_executor(tokio_executor_trait::Tokio::current())
+        .with_reactor(tokio_reactor_trait::Tokio::current());
 
     Ok(Connection::connect(&addr, props).await?)
 }

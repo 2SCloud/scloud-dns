@@ -1,4 +1,3 @@
-use std::sync::atomic::AtomicU8;
 use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
