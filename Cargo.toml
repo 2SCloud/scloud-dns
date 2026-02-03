@@ -17,7 +17,7 @@ libc = "0.2.180"
 winapi = "0.3.9"
 uuid = { version = "1.20.0", features = ["v4"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-lapin = { version = "2", features = ["executor"] }
+lapin = { version = "2.5.5", features = ["rustls"] }
 futures-util = "0.3"
 
 [target.'cfg(windows)'.dependencies]
