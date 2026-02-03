@@ -11,6 +11,7 @@ mod macos;
 
 #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 mod others;
+mod tests;
 
 #[cfg(windows)]
 mod thread {

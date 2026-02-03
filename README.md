@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://2scloud.github.io/scloud-dns/coverage/">
-    <img src="https://img.shields.io/endpoint?url=https://2scloud.github.io/scloud-dns/coverage_badge.json" alt="Coverage">
+    <img src="https://img.shields.io/endpoint?url=https://2scloud.github.io/scloud-dns/coverage.json" alt="Coverage">
   </a>
   <a href="https://github.com/2SCloud/scloud-dns/actions">
     <img src="https://img.shields.io/github/actions/workflow/status/2SCloud/scloud-dns/coverage.yml?branch=main" alt="Build Status">
