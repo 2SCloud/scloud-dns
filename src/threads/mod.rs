@@ -3,6 +3,7 @@ use anyhow::Result;
 use futures_util::StreamExt;
 use lapin::{options::*, types::FieldTable, BasicProperties, Channel, Connection};
 use lapin::message::Delivery;
+use serde::{Deserialize, Serialize};
 use crate::threads::task::ScloudWorkerTask;
 
 pub(crate) mod tests;
@@ -486,7 +487,7 @@ pub(crate) enum ShutdownMode {
 
 #[allow(unused)]
 #[allow(non_camel_case_types)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub enum WorkerType {
     LISTENER,
     DECODER,
