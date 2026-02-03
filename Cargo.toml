@@ -3,10 +3,6 @@ name = "SCloudDNS"
 version = "0.1.0"
 edition = "2024"
 
-[patch.crates-io]
-reactor-trait = "=3.1.1"
-async-reactor-trait = "=3.1.1"
-
 [dependencies]
 strum = "0.26"
 strum_macros = "0.26"
