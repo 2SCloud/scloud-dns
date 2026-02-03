@@ -1,15 +1,13 @@
 use std::sync::atomic::{AtomicU8, AtomicU64, AtomicUsize, AtomicBool, Ordering};
 use anyhow::Result;
 use futures_util::StreamExt;
-use lapin::{
-    options::*,
-    types::FieldTable,
-    Channel, Connection,
-};
+use lapin::{options::*, types::FieldTable, BasicProperties, Channel, Connection};
 use lapin::message::Delivery;
+use crate::threads::task::ScloudWorkerTask;
 
 pub(crate) mod tests;
 pub(crate) mod task;
+mod rabbit_mq;
 
 #[cfg(windows)]
 mod windows;
@@ -22,7 +20,6 @@ mod macos;
 
 #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 mod others;
-mod rabbit_mq;
 
 #[cfg(windows)]
 mod thread {
@@ -116,38 +113,38 @@ pub(crate) struct ScloudWorker {
 impl ScloudWorker {
     const NEVER_APPLIED: u8 = 0xFF;
 
-    pub(crate) fn new(worker_type: WorkerType) -> Self {
+    pub(crate) fn new(worker_id: u64, worker_type: WorkerType) -> Self {
         Self {
-            worker_id: 0,
-            os_thread_id: (),
+            worker_id,
+            os_thread_id: AtomicU64::new(0),
             worker_type,
-            stack_size_bytes: (),
-            buffer_budget_bytes: (),
-            max_stack_size_bytes: (),
-            max_buffer_budget_bytes: (),
-            priority: (),
-            priority_scope: (),
-            last_applied_priority: (),
-            last_applied_scope: (),
-            state: (),
-            shutdown_requested: (),
-            shutdown_mode: (),
-            in_flight: (),
-            max_in_flight: (),
-            jobs_done: (),
-            jobs_failed: (),
-            jobs_retried: (),
-            last_job_started_ms: (),
-            last_job_finished_ms: (),
-            last_error_code: (),
-            last_error_at_ms: (),
-            last_task_id_hi: (),
-            last_task_id_lo: (),
-            consumer_tag_hash: (),
+            stack_size_bytes: AtomicUsize::new(2 * 1024 * 1024),
+            buffer_budget_bytes: AtomicUsize::new(4 * 1024 * 1024),
+            max_stack_size_bytes: AtomicUsize::new(32 * 1024 * 1024),
+            max_buffer_budget_bytes: AtomicUsize::new(256 * 1024 * 1024),
+            priority: AtomicU8::new(ThreadPriority::NORMAL as u8),
+            priority_scope: AtomicU8::new(PriorityScope::THREAD as u8),
+            last_applied_priority: AtomicU8::new(Self::NEVER_APPLIED),
+            last_applied_scope: AtomicU8::new(Self::NEVER_APPLIED),
+            state: AtomicU8::new(WorkerState::IDLE as u8),
+            shutdown_requested: AtomicBool::new(false),
+            shutdown_mode: AtomicU8::new(ShutdownMode::GRACEFUL as u8),
+            in_flight: AtomicUsize::new(0),
+            max_in_flight: AtomicUsize::new(1),
+            jobs_done: AtomicU64::new(0),
+            jobs_failed: AtomicU64::new(0),
+            jobs_retried: AtomicU64::new(0),
+            last_job_started_ms: AtomicU64::new(0),
+            last_job_finished_ms: AtomicU64::new(0),
+            last_error_code: AtomicU64::new(0),
+            last_error_at_ms: AtomicU64::new(0),
+            last_task_id_hi: AtomicU64::new(0),
+            last_task_id_lo: AtomicU64::new(0),
+            consumer_tag_hash: AtomicU64::new(0),
         }
     }
 
-    pub async fn run_worker(conn: &Connection) -> Result<()> {
+    pub(crate) async fn run(conn: &Connection) -> Result<()> {
         let channel = conn.create_channel().await?;
 
         channel
@@ -173,8 +170,8 @@ impl ScloudWorker {
         Ok(())
     }
 
-    async fn handle_delivery(channel: &Channel, delivery: Delivery) -> Result<()> {
-        let task: ScloudWorkerTask = serde_json::from_slice(&delivery.data)?;
+    pub(crate) async fn handle_delivery(channel: &Channel, delivery: Delivery) -> Result<()> {
+        let task: ScloudWorkerTask = serde_json::from_slice((&delivery.data).as_ref())?;
 
         println!("Received task {:?}", task.task_id);
 
