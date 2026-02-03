@@ -50,30 +50,50 @@ jobs:
 
       - name: Generate coverage badge (per OS)
         shell: bash
+        env:
+          OS_LABEL: ${{ matrix.os_label }}
         run: |
           set -euo pipefail
+          python - <<'PY'
+          import json, os
 
-          LINE=$(jq '.data[0].totals.lines.percent' coverage.json)
-          FUNC=$(jq '.data[0].totals.functions.percent' coverage.json)
-          REGION=$(jq '.data[0].totals.regions.percent' coverage.json)
+          with open("coverage.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
 
-          PERCENT=$(echo "($LINE + $FUNC + $REGION)/3" | bc -l | xargs printf "%.2f")
-          PERCENT_INT=$(printf "%.0f" "$PERCENT")
+          totals = data["data"][0]["totals"]
+          line = float(totals["lines"]["percent"])
+          func = float(totals["functions"]["percent"])
+          region = float(totals["regions"]["percent"])
 
-          if [ "$PERCENT_INT" -ge 90 ]; then COLOR="brightgreen";
-          elif [ "$PERCENT_INT" -ge 75 ]; then COLOR="yellowgreen";
-          else COLOR="red";
-          fi
+          percent = (line + func + region) / 3.0
+          percent_str = f"{percent:.2f}"
+          percent_int = int(round(percent))
 
-          cat > coverage_badge.json <<EOF
-          {
-            "schemaVersion": 1,
-            "label": "coverage (${{ matrix.os_label }})",
-            "message": "${PERCENT}%",
-            "color": "${COLOR}"
+          if percent_int >= 90:
+              color = "brightgreen"
+          elif percent_int >= 75:
+              color = "yellowgreen"
+          else:
+              color = "red"
+
+          label = os.environ.get("OS_LABEL", "").strip()
+          if label:
+              label = f"coverage ({label})"
+          else:
+              label = "coverage"
+
+          out = {
+              "schemaVersion": 1,
+              "label": label,
+              "message": f"{percent_str}%",
+              "color": color
           }
-          EOF
 
+          with open("coverage_badge.json", "w", encoding="utf-8") as f:
+              json.dump(out, f)
+
+          print("Wrote coverage_badge.json:", out)
+          PY
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
@@ -96,48 +116,68 @@ jobs:
         with:
           path: artifacts
 
-      - name: Assemble site (reports + badges)
+      - name: Assemble site (reports + badges + global)
         shell: bash
         run: |
           set -euo pipefail
 
           mkdir -p site/coverage
 
+          # Copy HTML reports into per-OS folders
           for os in linux windows macos; do
             mkdir -p "site/coverage/${os}"
             cp -r "artifacts/coverage-${os}/html/"* "site/coverage/${os}/"
           done
 
+          # Copy per-OS badge JSON endpoints to Pages root
           for os in linux windows macos; do
             cp "artifacts/coverage-${os}/coverage_badge.json" "site/coverage-${os}.json"
           done
 
-          sum=0
-          for os in linux windows macos; do
-            LINE=$(jq '.data[0].totals.lines.percent' "artifacts/coverage-${os}/coverage.json")
-            FUNC=$(jq '.data[0].totals.functions.percent' "artifacts/coverage-${os}/coverage.json")
-            REGION=$(jq '.data[0].totals.regions.percent' "artifacts/coverage-${os}/coverage.json")
-            P=$(echo "($LINE + $FUNC + $REGION)/3" | bc -l)
-            sum=$(echo "$sum + $P" | bc -l)
-          done
+          # Global badge = average of the 3 OS percentages (each OS percent is avg(lines, functions, regions))
+          python - <<'PY'
+          import json
 
-          GLOBAL=$(echo "$sum/3" | bc -l | xargs printf "%.2f")
-          GLOBAL_INT=$(printf "%.0f" "$GLOBAL")
+          def os_percent(path):
+              with open(path, "r", encoding="utf-8") as f:
+                  data = json.load(f)
+              totals = data["data"][0]["totals"]
+              line = float(totals["lines"]["percent"])
+              func = float(totals["functions"]["percent"])
+              region = float(totals["regions"]["percent"])
+              return (line + func + region) / 3.0
 
-          if [ "$GLOBAL_INT" -ge 90 ]; then COLOR="brightgreen";
-          elif [ "$GLOBAL_INT" -ge 75 ]; then COLOR="yellowgreen";
-          else COLOR="red";
-          fi
+          percents = [
+              os_percent("artifacts/coverage-linux/coverage.json"),
+              os_percent("artifacts/coverage-windows/coverage.json"),
+              os_percent("artifacts/coverage-macos/coverage.json"),
+          ]
 
-          cat > site/coverage.json <<EOF
-          {
-            "schemaVersion": 1,
-            "label": "coverage",
-            "message": "${GLOBAL}%",
-            "color": "${COLOR}"
+          global_pct = sum(percents) / len(percents)
+          global_str = f"{global_pct:.2f}"
+          global_int = int(round(global_pct))
+
+          if global_int >= 90:
+              color = "brightgreen"
+          elif global_int >= 75:
+              color = "yellowgreen"
+          else:
+              color = "red"
+
+          out = {
+              "schemaVersion": 1,
+              "label": "coverage",
+              "message": f"{global_str}%",
+              "color": color
           }
-          EOF
 
+          with open("site/coverage.json", "w", encoding="utf-8") as f:
+              json.dump(out, f)
+
+          print("Wrote site/coverage.json:", out)
+          PY
+
+          # Homepage
           cat > site/index.html << 'EOF'
           <!DOCTYPE html>
           <html lang="en">
@@ -165,7 +205,7 @@ jobs:
               <li><a href="coverage/macos/">macOS report</a></li>
             </ul>
 
-            <h2>Badges (JSON endpoints)</h2>
+            <h2>Badge endpoints</h2>
             <ul>
               <li><a href="coverage.json">Global (average)</a></li>
               <li><a href="coverage-linux.json">Linux</a></li>
@@ -188,6 +228,7 @@ jobs:
   deploy:
     needs: build_pages
     runs-on: ubuntu-latest
+
     if: >
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main'
