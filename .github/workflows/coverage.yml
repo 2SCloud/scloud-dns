@@ -123,18 +123,23 @@ jobs:
 
           mkdir -p site/coverage
 
-          # Copy HTML reports into per-OS folders
           for os in linux windows macos; do
+            SRC="artifacts/coverage-${os}/target/llvm-cov/html"
+            if [ ! -d "$SRC" ]; then
+              echo "Expected coverage HTML dir not found: $SRC"
+              echo "Directory tree under artifacts/coverage-${os}:"
+              find "artifacts/coverage-${os}" -maxdepth 4 -type d | sed 's/^/  /'
+              exit 1
+            fi
+
             mkdir -p "site/coverage/${os}"
-            cp -r "artifacts/coverage-${os}/html/"* "site/coverage/${os}/"
+            cp -r "${SRC}/"* "site/coverage/${os}/"
           done
 
-          # Copy per-OS badge JSON endpoints to Pages root
           for os in linux windows macos; do
             cp "artifacts/coverage-${os}/coverage_badge.json" "site/coverage-${os}.json"
           done
 
-          # Global badge = average of the 3 OS percentages (each OS percent is avg(lines, functions, regions))
           python - <<'PY'
           import json
 
@@ -164,12 +169,7 @@ jobs:
           else:
               color = "red"
 
-          out = {
-              "schemaVersion": 1,
-              "label": "coverage",
-              "message": f"{global_str}%",
-              "color": color
-          }
+          out = {"schemaVersion": 1, "label": "coverage", "message": f"{global_str}%", "color": color}
 
           with open("site/coverage.json", "w", encoding="utf-8") as f:
               json.dump(out, f)
@@ -177,7 +177,6 @@ jobs:
           print("Wrote site/coverage.json:", out)
           PY
 
-          # Homepage
           cat > site/index.html << 'EOF'
           <!DOCTYPE html>
           <html lang="en">
