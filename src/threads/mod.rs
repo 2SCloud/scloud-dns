@@ -164,16 +164,14 @@ impl ScloudWorker {
 
         while let Some(delivery) = consumer.next().await {
             let delivery = delivery?;
-            handle_delivery(&channel, delivery).await?;
+            Self::handle_delivery(&channel, delivery).await?;
         }
 
         Ok(())
     }
 
-    pub(crate) async fn handle_delivery(channel: &Channel, delivery: Delivery) -> Result<()> {
+    async fn handle_delivery(channel: &Channel, delivery: Delivery) -> Result<()> {
         let task: ScloudWorkerTask = serde_json::from_slice((&delivery.data).as_ref())?;
-
-        println!("Received task {:?}", task.task_id);
 
         let response = serde_json::json!({
         "ok": true,
@@ -182,14 +180,19 @@ impl ScloudWorker {
     });
 
         if let Some(reply_to) = delivery.properties.reply_to() {
+            let mut props = BasicProperties::default();
+
+            if let Some(cid) = delivery.properties.correlation_id().clone() {
+                props = props.with_correlation_id(cid);
+            }
+
             channel
                 .basic_publish(
                     "",
                     reply_to.as_str(),
                     BasicPublishOptions::default(),
                     &serde_json::to_vec(&response)?,
-                    BasicProperties::default()
-                        .with_correlation_id(delivery.properties.correlation_id().clone()),
+                    props,
                 )
                 .await?
                 .await?;
@@ -198,6 +201,7 @@ impl ScloudWorker {
         delivery.ack(BasicAckOptions::default()).await?;
         Ok(())
     }
+
 
     #[inline]
     pub fn get_worker_id(&self) -> u64 {

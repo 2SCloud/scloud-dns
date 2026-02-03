@@ -1,9 +1,11 @@
-use std::sync::atomic::{AtomicU64, AtomicU8};
+use std::sync::atomic::AtomicU8;
 use std::time::SystemTime;
 use uuid::Uuid;
 use crate::threads::WorkerType;
 
+#[allow(unused)]
 #[allow(non_camel_case_types)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct ScloudWorkerTask {
     pub task_id: Uuid,
     pub for_type: WorkerType,
