@@ -4,6 +4,7 @@
 //! JSON configuration you provided. It includes helpers to load the config
 //! from a file and a light `validate()` method placeholder you can extend.
 
+use std::collections::HashSet;
 use crate::exceptions::SCloudException;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -91,22 +92,232 @@ impl Config {
     pub fn from_file(path: &Path) -> Result<Self, SCloudException> {
         let s = fs::read_to_string(path)
             .with_context(|| format!("reading config file {}", path.display()))
-            .map_err(|_| SCloudException::SCLOUD_CONFIG_FILE_NOT_FOUND);
-        let cfg: Config = serde_json::from_str(&s.unwrap())
+            .map_err(|_| SCloudException::SCLOUD_CONFIG_FILE_NOT_FOUND)?;
+        let cfg: Config = serde_json::from_str(&s)
             .context("parsing JSON config")
             .map_err(|_| SCloudException::SCLOUD_CONFIG_IMPOSSIBLE_TO_PARSE_JSON)?;
-        // cfg.validate()?;
+        cfg.validate()?;
         Ok(cfg)
     }
 
-    /// Basic validation hook — extend with more checks as needed
-    #[allow(unused)]
-    pub fn validate(&self) -> Result<()> {
-        // Example checks:
-        // - ensure no duplicate zone names
-        // - ensure TSIG key references exist for zones that reference them
-        // - ensure listener port ranges, etc.
-        // For now, just return Ok.
+    /// Validation hook
+    pub fn validate(&self) -> Result<(), SCloudException> {
+
+        let acl_names: HashSet<&str> = self.acl.iter().map(|a| a.name.as_str()).collect();
+        let tsig_names: HashSet<&str> = self.tsig_key.iter().map(|t| t.name.as_str()).collect();
+        let _forwarder_names: HashSet<&str> = self.forwarder.iter().map(|f| f.name.as_str()).collect();
+
+        let is_acl_ref_valid = |s: &str| -> bool {
+            if s.trim().is_empty() {
+                return false;
+            }
+            acl_names.contains(s) || s.contains('/')
+        };
+
+        if self.server.bind_port == 0 {
+            return Err(SCloudException::SCLOUD_CONFIG_INVALID_SERVER_PORT);
+        }
+        if self.server.max_udp_payload == 0 || self.server.max_udp_payload > 65535 {
+            return Err(SCloudException::SCLOUD_CONFIG_INVALID_MAX_UDP_PAYLOAD);
+        }
+        if self.tuning.max_label_length == 0 || self.tuning.max_label_length > 63 {
+            return Err(SCloudException::SCLOUD_CONFIG_INVALID_DNS_LIMITS);
+        }
+        if self.tuning.max_domain_length == 0 || self.tuning.max_domain_length > 253 {
+            return Err(SCloudException::SCLOUD_CONFIG_INVALID_DNS_LIMITS);
+        }
+        if self.limits.max_udp_packet_size == 0 || self.limits.max_udp_packet_size > 65535 {
+            return Err(SCloudException::SCLOUD_CONFIG_INVALID_DNS_LIMITS);
+        }
+
+        let mut listener_names = HashSet::new();
+        for l in &self.listener {
+            if l.name.trim().is_empty() {
+                return Err(SCloudException::SCLOUD_CONFIG_INVALID_LISTENER);
+            }
+            if !listener_names.insert(l.name.as_str()) {
+                return Err(SCloudException::SCLOUD_CONFIG_DUPLICATE_LISTENER_NAME);
+            }
+            if l.port == 0 {
+                return Err(SCloudException::SCLOUD_CONFIG_INVALID_LISTENER_PORT);
+            }
+            if l.protocols.is_empty() {
+                return Err(SCloudException::SCLOUD_CONFIG_INVALID_LISTENER_PROTOCOLS);
+            }
+            if !l.acl.trim().is_empty() && !is_acl_ref_valid(&l.acl) {
+                return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE);
+            }
+
+            if l.enable_tls.unwrap_or(false) {
+                if l.tls_cert_path.as_deref().unwrap_or("").trim().is_empty() {
+                    return Err(SCloudException::SCLOUD_CONFIG_TLS_MISSING_CERT);
+                }
+                if l.tls_key_path.as_deref().unwrap_or("").trim().is_empty() {
+                    return Err(SCloudException::SCLOUD_CONFIG_TLS_MISSING_KEY);
+                }
+                if !l.protocols.iter().any(|p| matches!(p, Protocol::TCP)) {
+                    return Err(SCloudException::SCLOUD_CONFIG_TLS_REQUIRES_TCP);
+                }
+            }
+        }
+
+        if self.doh.enabled {
+            if self.doh.tls_cert_path.as_deref().unwrap_or("").trim().is_empty() {
+                return Err(SCloudException::SCLOUD_CONFIG_TLS_MISSING_CERT);
+            }
+            if self.doh.tls_key_path.as_deref().unwrap_or("").trim().is_empty() {
+                return Err(SCloudException::SCLOUD_CONFIG_TLS_MISSING_KEY);
+            }
+            if self.doh.paths.is_empty() {
+                return Err(SCloudException::SCLOUD_CONFIG_INVALID_DOH);
+            }
+        }
+
+        if self.recursion.enabled {
+            if self.recursion.allowed_acl.trim().is_empty() {
+                return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE);
+            }
+            if !is_acl_ref_valid(&self.recursion.allowed_acl) {
+                return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE);
+            }
+        }
+
+        let mut fwd_names = HashSet::new();
+        for f in &self.forwarder {
+            if f.name.trim().is_empty() {
+                return Err(SCloudException::SCLOUD_CONFIG_INVALID_FORWARDER);
+            }
+            if !fwd_names.insert(f.name.as_str()) {
+                return Err(SCloudException::SCLOUD_CONFIG_DUPLICATE_FORWARDER_NAME);
+            }
+            if f.addresses.is_empty() {
+                return Err(SCloudException::SCLOUD_CONFIG_INVALID_FORWARDER);
+            }
+            for a in &f.addresses {
+                if a.parse::<std::net::SocketAddr>().is_err() {
+                    return Err(SCloudException::SCLOUD_CONFIG_IMPOSSIBLE_TO_PARSE_ADDR);
+                }
+            }
+        }
+
+        let mut zone_names = HashSet::new();
+        for z in &self.zone {
+            if z.name.trim().is_empty() {
+                return Err(SCloudException::SCLOUD_CONFIG_INVALID_ZONE);
+            }
+            if !zone_names.insert(z.name.as_str()) {
+                return Err(SCloudException::SCLOUD_CONFIG_DUPLICATE_ZONE_NAME);
+            }
+
+            match z.kind {
+                ZoneType::Master => {
+                    let inline = z.inline.unwrap_or(false);
+                    if inline {
+                        if z.records.is_empty() {
+                            return Err(SCloudException::SCLOUD_CONFIG_INVALID_INLINE_ZONE);
+                        }
+                        let has_soa = z.records.iter().any(|r| r.r#type.eq_ignore_ascii_case("SOA"));
+                        if !has_soa {
+                            return Err(SCloudException::SCLOUD_CONFIG_INVALID_INLINE_ZONE);
+                        }
+                    } else {
+                        if z.file.as_deref().unwrap_or("").trim().is_empty() {
+                            return Err(SCloudException::SCLOUD_CONFIG_ZONE_MISSING_FILE);
+                        }
+                    }
+
+                    if let Some(acl) = z.notify_acl.as_deref() {
+                        if !acl.trim().is_empty() && !is_acl_ref_valid(acl) {
+                            return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE);
+                        }
+                    }
+                    if let Some(acl) = z.allow_transfer_acl.as_deref() {
+                        if !acl.trim().is_empty() && !is_acl_ref_valid(acl) {
+                            return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE);
+                        }
+                    }
+
+                    if let Some(k) = z.axfr_tsig_key.as_deref() {
+                        if !k.trim().is_empty() && !tsig_names.contains(k) {
+                            return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_TSIG_KEY);
+                        }
+                    }
+                }
+                ZoneType::Slave => {
+                    if z.masters.is_empty() {
+                        return Err(SCloudException::SCLOUD_CONFIG_SLAVE_MISSING_MASTERS);
+                    }
+                    for m in &z.masters {
+                        if m.parse::<std::net::SocketAddr>().is_err() {
+                            return Err(SCloudException::SCLOUD_CONFIG_IMPOSSIBLE_TO_PARSE_ADDR);
+                        }
+                    }
+                    if z.file.as_deref().unwrap_or("").trim().is_empty() {
+                        return Err(SCloudException::SCLOUD_CONFIG_ZONE_MISSING_FILE);
+                    }
+                }
+                ZoneType::Forward => {
+                    if z.forwarders.is_empty() {
+                        return Err(SCloudException::SCLOUD_CONFIG_FORWARD_ZONE_MISSING_FORWARDERS);
+                    }
+                    for f in &z.forwarders {
+                        if f.parse::<std::net::SocketAddr>().is_err() {
+                            return Err(SCloudException::SCLOUD_CONFIG_IMPOSSIBLE_TO_PARSE_ADDR);
+                        }
+                    }
+                }
+                ZoneType::Stub => {
+                    // TODO: not defined JSON yet, strict checks later when I will implement it.
+                }
+            }
+
+            for r in &z.records {
+                if r.r#type.eq_ignore_ascii_case("MX") {
+                    if r.priority.is_none() {
+                        return Err(SCloudException::SCLOUD_CONFIG_MX_MISSING_PRIORITY);
+                    }
+                } else if r.priority.is_some() {
+                    return Err(SCloudException::SCLOUD_CONFIG_PRIORITY_ON_NON_MX);
+                }
+            }
+        }
+
+        let mut view_names = HashSet::new();
+        for v in &self.view {
+            if v.name.trim().is_empty() {
+                return Err(SCloudException::SCLOUD_CONFIG_INVALID_VIEW);
+            }
+            if !view_names.insert(v.name.as_str()) {
+                return Err(SCloudException::SCLOUD_CONFIG_DUPLICATE_VIEW_NAME);
+            }
+            if v.acl.trim().is_empty() || !is_acl_ref_valid(&v.acl) {
+                return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE);
+            }
+            for vz in &v.zones {
+                if vz.name.trim().is_empty() || vz.file.trim().is_empty() {
+                    return Err(SCloudException::SCLOUD_CONFIG_INVALID_VIEW);
+                }
+            }
+        }
+
+        for d in &self.dynupdate {
+            if d.zone.trim().is_empty() {
+                return Err(SCloudException::SCLOUD_CONFIG_INVALID_DYNUPDATE);
+            }
+            if d.acl.trim().is_empty() || !is_acl_ref_valid(&d.acl) {
+                return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE);
+            }
+            if let Some(k) = d.tsig_key.as_deref() {
+                if !k.trim().is_empty() && !tsig_names.contains(k) {
+                    return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_TSIG_KEY);
+                }
+            }
+
+            if !zone_names.contains(d.zone.as_str()) {
+                return Err(SCloudException::SCLOUD_CONFIG_DYNUPDATE_UNKNOWN_ZONE);
+            }
+        }
+
         Ok(())
     }
 
@@ -155,6 +366,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             server: ServerConfig::default(),
+            workers: WorkersConfig::default(),
             logging: LoggingConfig::default(),
             metrics: MetricsConfig::default(),
             admin: AdminConfig::default(),
@@ -181,15 +393,10 @@ impl Default for Config {
     }
 }
 
-/* ---------------------------
-Server / runtime settings
---------------------------- */
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerConfig {
     pub name: String,
     pub environment: String,
-    pub workers: usize,
     pub max_concurrent_requests: usize,
     pub graceful_shutdown_timeout_secs: u64,
 
@@ -207,7 +414,6 @@ impl Default for ServerConfig {
         ServerConfig {
             name: "scloud-dns".to_string(),
             environment: "production".to_string(),
-            workers: 8,
             max_concurrent_requests: 5000,
             graceful_shutdown_timeout_secs: 15,
             default_ttl: 3600,
@@ -220,9 +426,40 @@ impl Default for ServerConfig {
     }
 }
 
-/* ---------------------------
-Logging / metrics / admin
---------------------------- */
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkersConfig {
+    pub listener: u16,
+    pub decoder: u16,
+    pub query_dispatcher: u16,
+    pub cache_lookup: u16,
+    pub zone_manager: u16,
+    pub resolver: u16,
+    pub cache_writer: u16,
+    pub encoder: u16,
+    pub sender: u16,
+    pub cache_janitor: u16,
+    pub metrics: u16,
+    pub tcp_acceptor: u16
+}
+
+impl Default for WorkersConfig {
+    fn default() -> Self {
+        WorkersConfig {
+            listener: 5,
+            decoder: 5,
+            query_dispatcher: 3,
+            cache_lookup:  3,
+            zone_manager: 1,
+            resolver: 5,
+            cache_writer: 1,
+            encoder: 5,
+            sender: 5,
+            cache_janitor: 1,
+            metrics: 2,
+            tcp_acceptor: 1
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoggingConfig {
@@ -283,19 +520,11 @@ impl Default for AdminConfig {
     }
 }
 
-/* ---------------------------
-ACLs
---------------------------- */
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AclEntry {
     pub name: String,
     pub networks: Vec<String>, // CIDRs or single IPs; parse later with ipnet or similar
 }
-
-/* ---------------------------
-Listeners (UDP/TCP/DoT)
---------------------------- */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListenerConfig {
@@ -343,10 +572,6 @@ pub enum Protocol {
     TCP,
 }
 
-/* ---------------------------
-DoH
---------------------------- */
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DohConfig {
     pub enabled: bool,
@@ -373,10 +598,6 @@ impl Default for DohConfig {
         }
     }
 }
-
-/* ---------------------------
-Forwarders / root hints
---------------------------- */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ForwarderConfig {
@@ -410,10 +631,6 @@ pub enum ForwardPolicy {
     Random,
 }
 
-/* ---------------------------
-Root hints
---------------------------- */
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RootHintsConfig {
     pub file: String,
@@ -426,10 +643,6 @@ impl Default for RootHintsConfig {
         }
     }
 }
-
-/* ---------------------------
-Cache & recursion
---------------------------- */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CacheConfig {
@@ -473,10 +686,6 @@ impl Default for RecursionConfig {
     }
 }
 
-/* ---------------------------
-Rate limiting / RRL
---------------------------- */
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RateLimitConfig {
     pub enabled: bool,
@@ -516,10 +725,6 @@ impl Default for RrlConfig {
         }
     }
 }
-
-/* ---------------------------
-Zones & Records
---------------------------- */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ZoneConfig {
@@ -598,15 +803,11 @@ pub struct ZoneRecord {
     pub priority: Option<u16>,
 }
 
-/* ---------------------------
-TSIG / AXFR / DNSSEC
---------------------------- */
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TsigKey {
     pub name: String,
     pub algorithm: String,
-    pub secret: String, // base64 encoded - do not keep in plaintext in production
+    pub secret: String, // TODO: base64 encoded - do not keep in plaintext in production
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -644,10 +845,6 @@ impl Default for DnssecConfig {
         }
     }
 }
-
-/* ---------------------------
-Policy / mitigation / tuning
---------------------------- */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolicyConfig {
@@ -697,10 +894,6 @@ impl Default for TuningConfig {
     }
 }
 
-/* ---------------------------
-Views (split-horizon)
---------------------------- */
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ViewConfig {
     pub name: String,
@@ -714,10 +907,6 @@ pub struct ViewZone {
     pub name: String,
     pub file: String,
 }
-
-/* ---------------------------
-Monitoring / dynamic updates / limits
---------------------------- */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MonitoringConfig {
