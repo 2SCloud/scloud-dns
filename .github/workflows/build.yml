@@ -43,7 +43,7 @@ jobs:
             ${{ runner.os }}-${{ matrix.toolchain }}-cargo-
 
       - name: Build workspace
-        run: cargo build --workspace --all-targets
+        run: cargo build --workspace --all-targets --locked
   sonarqube:
     name: SonarQube
     runs-on: ubuntu-latest
