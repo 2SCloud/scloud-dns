@@ -59,7 +59,7 @@ dependencies = [
  "async-trait",
  "cfg-if",
  "executor-trait",
- "reactor-trait 2.7.0",
+ "reactor-trait 2.8.0",
  "tcp-stream",
  "tracing",
 ]
@@ -818,7 +818,7 @@ dependencies = [
  "flume",
  "futures-core",
  "futures-io",
- "reactor-trait 2.7.0",
+ "reactor-trait 2.8.0",
  "tracing",
 ]
 
@@ -1168,15 +1168,12 @@ dependencies = [
 
 [[package]]
 name = "reactor-trait"
-version = "2.7.0"
+version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51d05d2072db44c9e2769ee9e700ec5e56330500b1753ab114d4eeeecacf81db"
+checksum = "0ffbbf16bc3e4db5fdcf4b77cebf1313610b54b339712aa90088d2d9b1acb1f1"
 dependencies = [
  "async-trait",
- "executor-trait",
- "flume",
- "futures-core",
- "futures-io",
+ "reactor-trait 3.1.1",
 ]
 
 [[package]]
@@ -1538,7 +1535,7 @@ dependencies = [
  "cfg-if",
  "futures-io",
  "p12-keystore",
- "reactor-trait 2.7.0",
+ "reactor-trait 2.8.0",
  "rustls-connector",
  "rustls-pemfile",
 ]
