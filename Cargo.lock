@@ -13,7 +13,7 @@ dependencies = [
  "libc",
  "nix",
  "rand",
- "reactor-trait 2.7.0",
+ "reactor-trait 3.1.1",
  "serde",
  "serde_json",
  "strum",
@@ -22,7 +22,7 @@ dependencies = [
  "tokio",
  "tokio-amqp",
  "tokio-executor-trait",
- "tokio-reactor-trait 2.7.0",
+ "tokio-reactor-trait 3.8.0",
  "uuid",
  "winapi",
 ]
@@ -2205,9 +2205,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-reactor-trait"
-version = "2.7.0"
+version = "3.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a458606b9e7d0702f5e97e6b65dca847a2f811d5582ece6b8c4941e0ac58c50"
+checksum = "a342ef9732e1c59a80093a47dc8a9831ca66fab2b3d2f1fb17498dde72a4c731"
 dependencies = [
  "async-trait",
  "futures-core",

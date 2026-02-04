@@ -17,6 +17,9 @@ pub struct Config {
     pub server: ServerConfig,
 
     #[serde(default)]
+    pub workers: WorkersConfig,
+
+    #[serde(default)]
     pub logging: LoggingConfig,
 
     #[serde(default)]
