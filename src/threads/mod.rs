@@ -1,14 +1,13 @@
-use std::sync::atomic::{AtomicU8, AtomicU64, AtomicUsize, AtomicBool, Ordering};
+use crate::exceptions::SCloudException;
+use crate::threads::task::ScloudWorkerTask;
+use crate::{log_debug, utils};
 use anyhow::Result;
 use futures_util::StreamExt;
-use lapin::{options::*, types::FieldTable, BasicProperties, Channel, Connection};
-use lapin::message::Delivery;
 use serde::{Deserialize, Serialize};
-use crate::threads::task::ScloudWorkerTask;
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
 
-pub(crate) mod tests;
 pub(crate) mod task;
-mod rabbit_mq;
+pub(crate) mod tests;
 
 #[cfg(windows)]
 mod windows;
@@ -22,6 +21,7 @@ mod macos;
 #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 mod others;
 mod queue;
+mod workers;
 
 #[cfg(windows)]
 mod thread {
@@ -88,8 +88,8 @@ pub(crate) struct ScloudWorker {
     pub(crate) shutdown_mode: AtomicU8,
 
     // BACKPRESSURE/IN-FLIGHT
-    pub(crate) in_flight: AtomicUsize,        // should be 0/1
-    pub(crate) max_in_flight: AtomicUsize,    // prefetch/internal pool
+    pub(crate) in_flight: AtomicUsize,     // should be 0/1
+    pub(crate) max_in_flight: AtomicUsize, // prefetch/internal pool
 
     // METRICS
     pub(crate) jobs_done: AtomicU64,
@@ -103,13 +103,12 @@ pub(crate) struct ScloudWorker {
     pub(crate) last_error_at_ms: AtomicU64,
 
     // CORRELATION/TRACING
-    pub(crate) last_task_id_hi: AtomicU64,    // 128-bit UUID split
+    pub(crate) last_task_id_hi: AtomicU64, // 128-bit UUID split
     pub(crate) last_task_id_lo: AtomicU64,
 
     // BROKER RELATED
-    pub(crate) consumer_tag_hash: AtomicU64,  // find which consumer RabbitMQ (hash)
+    pub(crate) consumer_tag_hash: AtomicU64, // find which consumer RabbitMQ (hash)
 }
-
 
 #[allow(unused)]
 impl ScloudWorker {
@@ -146,64 +145,51 @@ impl ScloudWorker {
         }
     }
 
-    pub(crate) async fn run(conn: &Connection) -> Result<()> {
-        let channel = conn.create_channel().await?;
+    pub(crate) async fn run(&self) -> Result<(), SCloudException> {
+        // TODO: check the type of worker and adapt what is doing
+        match self.worker_type {
+            WorkerType::LISTENER => {
 
-        channel
-            .basic_qos(1, BasicQosOptions::default())
-            .await?;
-
-        let mut consumer = channel
-            .basic_consume(
-                "scloud.jobs.waiting",
-                "worker-1",
-                BasicConsumeOptions::default(),
-                FieldTable::default(),
-            )
-            .await?;
-
-        println!("Worker started");
-
-        while let Some(delivery) = consumer.next().await {
-            let delivery = delivery?;
-            Self::handle_delivery(&channel, delivery).await?;
-        }
-
-        Ok(())
-    }
-
-    async fn handle_delivery(channel: &Channel, delivery: Delivery) -> Result<()> {
-        let task: ScloudWorkerTask = serde_json::from_slice((&delivery.data).as_ref())?;
-
-        let response = serde_json::json!({
-        "ok": true,
-        "for": task.for_who,
-        "task_id": task.task_id.to_string(),
-    });
-
-        if let Some(reply_to) = delivery.properties.reply_to() {
-            let mut props = BasicProperties::default();
-
-            if let Some(cid) = delivery.properties.correlation_id().clone() {
-                props = props.with_correlation_id(cid);
             }
+            WorkerType::DECODER => {
 
-            channel
-                .basic_publish(
-                    "",
-                    reply_to.as_str(),
-                    BasicPublishOptions::default(),
-                    &serde_json::to_vec(&response)?,
-                    props,
-                )
-                .await?
-                .await?;
+            }
+            WorkerType::QUERY_DISPATCHER => {
+
+            }
+            WorkerType::CACHE_LOOKUP => {
+
+            }
+            WorkerType::ZONE_MANAGER => {
+
+            }
+            WorkerType::RESOLVER => {
+
+            }
+            WorkerType::CACHE_WRITER => {
+
+            }
+            WorkerType::ENCODER => {
+
+            }
+            WorkerType::SENDER => {
+
+            }
+            WorkerType::CACHE_JANITOR => {
+
+            }
+            WorkerType::METRICS => {
+
+            }
+            WorkerType::TCP_ACCEPTOR => {
+
+            }
+            _ => {
+
+            }
         }
-
-        delivery.ack(BasicAckOptions::default()).await?;
         Ok(())
     }
-
 
     #[inline]
     pub fn get_worker_id(&self) -> u64 {
@@ -352,22 +338,26 @@ impl ScloudWorker {
 
     #[inline]
     pub fn set_stack_size_bytes(&mut self, stack_size_bytes: usize) {
-        self.stack_size_bytes.store(stack_size_bytes, Ordering::Relaxed);
+        self.stack_size_bytes
+            .store(stack_size_bytes, Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_buffer_budget_bytes(&mut self, buffer_budget_bytes: usize) {
-        self.buffer_budget_bytes.store(buffer_budget_bytes, Ordering::Relaxed);
+        self.buffer_budget_bytes
+            .store(buffer_budget_bytes, Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_max_stack_size_bytes(&mut self, max_stack_size_bytes: usize) {
-        self.max_stack_size_bytes.store(max_stack_size_bytes, Ordering::Relaxed);
+        self.max_stack_size_bytes
+            .store(max_stack_size_bytes, Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_max_buffer_budget_bytes(&mut self, max_buffer_budget_bytes: usize) {
-        self.max_buffer_budget_bytes.store(max_buffer_budget_bytes, Ordering::Relaxed);
+        self.max_buffer_budget_bytes
+            .store(max_buffer_budget_bytes, Ordering::Relaxed);
     }
 
     #[inline]
@@ -382,12 +372,14 @@ impl ScloudWorker {
 
     #[inline]
     pub fn set_last_applied_priority(&mut self, last_applied_priority: u8) {
-        self.last_applied_priority.store(last_applied_priority, Ordering::Relaxed);
+        self.last_applied_priority
+            .store(last_applied_priority, Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_last_applied_scope(&mut self, last_applied_scope: u8) {
-        self.last_applied_scope.store(last_applied_scope, Ordering::Relaxed);
+        self.last_applied_scope
+            .store(last_applied_scope, Ordering::Relaxed);
     }
 
     #[inline]
@@ -397,7 +389,8 @@ impl ScloudWorker {
 
     #[inline]
     pub fn set_shutdown_requested(&mut self, shutdown_requested: bool) {
-        self.shutdown_requested.store(shutdown_requested, Ordering::Relaxed);
+        self.shutdown_requested
+            .store(shutdown_requested, Ordering::Relaxed);
     }
 
     #[inline]
@@ -432,37 +425,44 @@ impl ScloudWorker {
 
     #[inline]
     pub fn set_last_job_started_ms(&mut self, last_job_started_ms: u64) {
-        self.last_job_started_ms.store(last_job_started_ms, Ordering::Relaxed);
+        self.last_job_started_ms
+            .store(last_job_started_ms, Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_last_job_finished_ms(&mut self, last_job_finished_ms: u64) {
-        self.last_job_finished_ms.store(last_job_finished_ms, Ordering::Relaxed);
+        self.last_job_finished_ms
+            .store(last_job_finished_ms, Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_last_error_code(&mut self, last_error_code: u64) {
-        self.last_error_code.store(last_error_code, Ordering::Relaxed);
+        self.last_error_code
+            .store(last_error_code, Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_last_error_at_ms(&mut self, last_error_at_ms: u64) {
-        self.last_error_at_ms.store(last_error_at_ms, Ordering::Relaxed);
+        self.last_error_at_ms
+            .store(last_error_at_ms, Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_last_task_id_hi(&mut self, last_task_id_hi: u64) {
-        self.last_task_id_hi.store(last_task_id_hi, Ordering::Relaxed);
+        self.last_task_id_hi
+            .store(last_task_id_hi, Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_last_task_id_lo(&mut self, last_task_id_lo: u64) {
-        self.last_task_id_lo.store(last_task_id_lo, Ordering::Relaxed);
+        self.last_task_id_lo
+            .store(last_task_id_lo, Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_consumer_tag_hash(&mut self, consumer_tag_hash: u64) {
-        self.consumer_tag_hash.store(consumer_tag_hash, Ordering::Relaxed);
+        self.consumer_tag_hash
+            .store(consumer_tag_hash, Ordering::Relaxed);
     }
 }
 

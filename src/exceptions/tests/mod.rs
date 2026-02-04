@@ -82,7 +82,7 @@ mod tests {
             "[SCLOUD_CONFIG] Invalid DNS view configuration.",
             "[SCLOUD_CONFIG] Duplicate view name detected.",
             "[SCLOUD_CONFIG] Invalid dynamic update configuration.",
-            "[SCLOUD_CONFIG] Dynamic update references an unknown zone."
+            "[SCLOUD_CONFIG] Dynamic update references an unknown zone.",
         ];
 
         let mut i = 0;

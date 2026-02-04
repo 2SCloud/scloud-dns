@@ -168,8 +168,12 @@ impl SCloudException {
             SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE => "[QTYPE] Unknown `q_type`.",
 
             //QCLASS
-            SCloudException::SCLOUD_QCLASS_U16_FOR_DNSCLASS_UNKNOWN => "[QCLASS] Unknown `q_class`.",
-            SCloudException::SCLOUD_QCLASS_DNSCLASS_FOR_U16_UNKNOWN => "[QCLASS] Unknown `q_class`.",
+            SCloudException::SCLOUD_QCLASS_U16_FOR_DNSCLASS_UNKNOWN => {
+                "[QCLASS] Unknown `q_class`."
+            }
+            SCloudException::SCLOUD_QCLASS_DNSCLASS_FOR_U16_UNKNOWN => {
+                "[QCLASS] Unknown `q_class`."
+            }
 
             // STUB RESOLVER
             SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_ID => {
