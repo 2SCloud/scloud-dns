@@ -2,6 +2,7 @@ use lapin::{Connection, ConnectionProperties};
 use tokio_executor_trait::Tokio as TokioExecutor;
 use tokio_reactor_trait::Tokio as TokioReactor;
 
+#[allow(unused)]
 pub async fn connect() -> anyhow::Result<Connection> {
     let addr = std::env::var("AMQP_ADDR")
         .unwrap_or_else(|_| "amqp://guest:guest@localhost:5672/%2f".into());

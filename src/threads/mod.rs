@@ -507,6 +507,7 @@ pub enum WorkerType {
 }
 
 #[repr(u8)]
+#[allow(unused)]
 #[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ClassPriority {
@@ -520,6 +521,7 @@ pub enum ClassPriority {
 
 impl ClassPriority {
     #[inline]
+    #[allow(unused)]
     pub fn from_u8(v: u8) -> Self {
         match v {
             0 => Self::IDLE,
@@ -535,6 +537,8 @@ impl ClassPriority {
         }
     }
 
+    #[inline]
+    #[allow(unused)]
     pub fn to_unix_nice(self) -> i32 {
         match self {
             Self::IDLE => 19,
@@ -548,6 +552,7 @@ impl ClassPriority {
 }
 
 #[repr(u8)]
+#[allow(unused)]
 #[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ThreadPriority {
@@ -562,6 +567,7 @@ pub enum ThreadPriority {
 
 impl ThreadPriority {
     #[inline]
+    #[allow(unused)]
     fn from_u8(v: u8) -> Self {
         match v {
             0 => Self::IDLE,
@@ -580,6 +586,7 @@ impl ThreadPriority {
 }
 
 #[repr(u8)]
+#[allow(unused)]
 #[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PriorityScope {
@@ -591,6 +598,7 @@ pub enum PriorityScope {
 
 impl PriorityScope {
     #[inline]
+    #[allow(unused)]
     fn from_u8(v: u8) -> Self {
         match v {
             0 => Self::THREAD,
