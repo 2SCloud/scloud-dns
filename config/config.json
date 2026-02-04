@@ -2,7 +2,6 @@
   "server": {
     "name": "scloud-dns",
     "environment": "production",
-    "workers": 8,
     "max_concurrent_requests": 5000,
     "graceful_shutdown_timeout_secs": 15,
     "default_ttl": 3600,
@@ -11,6 +10,20 @@
     "enable_tcp": true,
     "enable_dnssec": false,
     "bind_port": 53
+  },
+  "workers": {
+    "listener": 5,
+    "decoder": 5,
+    "query_dispatcher": 3,
+    "cache_lookup":  3,
+    "zone_manager": 1,
+    "resolver": 5,
+    "cache_writer": 1,
+    "encoder": 5,
+    "sender": 5,
+    "cache_janitor": 1,
+    "metrics": 2,
+    "tcp_acceptor": 1
   },
   "logging": {
     "level": "warn",

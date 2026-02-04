@@ -5,36 +5,36 @@ mod tests {
 
     #[test]
     fn test_exceptions_to_str() {
-        let ex_msg_array: [&'static str; 38] = [
+        let ex_msg_array: [&'static str; 65] = [
             // HEADER SECTION
-            "Buffer length is less than header length.",
-            "The header is empty.",
+            "[HEADER_SECTION] Buffer length is less than header length.",
+            "[HEADER_SECTION] The header is empty.",
             // QUESTION SECTION
-            "Buffer length is less than question section length.",
-            "`q_name` too long.",
+            "[QUESTION_SECTION] Buffer length is less than question section length.",
+            "[QUESTION_SECTION] `q_name` too long.",
             // ANSWER SECTION
-            "Buffer length is less than answer section length.",
-            "Label too long for DNS.",
-            "Failed to parse DNS answer section: not enough bytes for TYPE, CLASS, TTL, and RDLENGTH.",
-            "Failed to parse DNS answer section: RDLENGTH exceeds remaining buffer size.",
+            "[ANSWER_SECTION] Buffer length is less than answer section length.",
+            "[ANSWER_SECTION] Label too long for DNS.",
+            "[ANSWER_SECTION] Failed to parse DNS answer section: not enough bytes for TYPE, CLASS, TTL, and RDLENGTH.",
+            "[ANSWER_SECTION] Failed to parse DNS answer section: RDLENGTH exceeds remaining buffer size.",
             // AUTHORITY SECTION
-            "Buffer length is less than authority section length.",
-            "Impossible to deserialize, `buf.len()` is lower than `pos+10`. (buf too short)",
+            "[AUTHORITY_SECTION] Buffer length is less than authority section length.",
+            "[AUTHORITY_SECTION] Impossible to deserialize, `buf.len()` is lower than `pos+10`. (buf too short)",
             // ADDITIONAL SECTION
-            "Buffer length is less than additional section length.",
-            "Impossible to deserialize, `buf.len()` is lower than `pos+10`. (buf too short)",
-            "`q_name` too long.",
-            "Buffer length is less than authority section length.",
+            "[ADDITIONAL_SECTION] Buffer length is less than additional section length.",
+            "[ADDITIONAL_SECTION] Impossible to deserialize, `buf.len()` is lower than `pos+10`. (buf too short)",
+            "[ADDITIONAL_SECTION] `q_name` too long.",
+            "[ADDITIONAL_SECTION] Buffer length is less than authority section length.",
             // QNAME
-            "Impossible to parse the `q_name`, check if a `q_name` is provided.",
-            "Impossible to parse the `q_name`, pos is greater than buffer length.",
-            "Impossible to parse the `q_name`, pos and len are greater than buffer length.",
-            "Impossible to parse the `q_name`, compression 0xC0xx failed.",
+            "[QNAME] Impossible to parse the `q_name`, check if a `q_name` is provided.",
+            "[QNAME] Impossible to parse the `q_name`, pos is greater than buffer length.",
+            "[QNAME] Impossible to parse the `q_name`, pos and len are greater than buffer length.",
+            "[QNAME] Impossible to parse the `q_name`, compression 0xC0xx failed.",
             // QTYPE
-            "Unknown `q_type`.",
+            "[QTYPE] Unknown `q_type`.",
             // QCLASS
-            "Unknown `q_class`.",
-            "Unknown `q_class`.",
+            "[QCLASS] Unknown `q_class`.",
+            "[QCLASS] Unknown `q_class`.",
             // STUB RESOLVER
             "[STUB_RESOLVER] Invalid DNS ID (difference between `response.header.id` and `request_id`).",
             "[STUB_RESOLVER] Invalid DNS response.",
@@ -56,6 +56,33 @@ mod tests {
             "[SCLOUD_CONFIG] Missing forwarder.",
             "[SCLOUD_CONFIG] Missing address.",
             "[SCLOUD_CONFIG] Error while parsing the IP address.",
+            "[SCLOUD_CONFIG] Invalid server port (must be between 1 and 65535).",
+            "[SCLOUD_CONFIG] Invalid max UDP payload size.",
+            "[SCLOUD_CONFIG] Invalid DNS limits (label length, domain length, or packet size).",
+            "[SCLOUD_CONFIG] Invalid listener configuration.",
+            "[SCLOUD_CONFIG] Duplicate listener name detected.",
+            "[SCLOUD_CONFIG] Invalid listener port.",
+            "[SCLOUD_CONFIG] Listener has no valid protocol defined.",
+            "[SCLOUD_CONFIG] TLS enabled but certificate path is missing.",
+            "[SCLOUD_CONFIG] TLS enabled but private key path is missing.",
+            "[SCLOUD_CONFIG] TLS listeners require TCP support.",
+            "[SCLOUD_CONFIG] Invalid DNS-over-HTTPS (DoH) configuration.",
+            "[SCLOUD_CONFIG] Unknown or invalid ACL reference.",
+            "[SCLOUD_CONFIG] Invalid forwarder configuration.",
+            "[SCLOUD_CONFIG] Duplicate forwarder name detected.",
+            "[SCLOUD_CONFIG] Invalid DNS zone configuration.",
+            "[SCLOUD_CONFIG] Duplicate zone name detected.",
+            "[SCLOUD_CONFIG] Zone file path is missing.",
+            "[SCLOUD_CONFIG] Slave zone has no master servers defined.",
+            "[SCLOUD_CONFIG] Forward zone has no forwarders defined.",
+            "[SCLOUD_CONFIG] Inline zone is invalid (missing records or SOA).",
+            "[SCLOUD_CONFIG] Referenced TSIG key does not exist.",
+            "[SCLOUD_CONFIG] MX record is missing priority field.",
+            "[SCLOUD_CONFIG] Priority field is only allowed on MX records.",
+            "[SCLOUD_CONFIG] Invalid DNS view configuration.",
+            "[SCLOUD_CONFIG] Duplicate view name detected.",
+            "[SCLOUD_CONFIG] Invalid dynamic update configuration.",
+            "[SCLOUD_CONFIG] Dynamic update references an unknown zone."
         ];
 
         let mut i = 0;
@@ -87,7 +114,7 @@ mod tests {
     #[test]
     fn test_exceptions_iter_count() {
         let count = SCloudException::iter().count();
-        let expected_count = 38;
+        let expected_count = 65;
         assert_eq!(count, expected_count);
     }
 

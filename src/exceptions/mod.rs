@@ -66,6 +66,33 @@ pub enum SCloudException {
     SCLOUD_CONFIG_MISSING_FORWARDER,
     SCLOUD_CONFIG_MISSING_ADDRESS,
     SCLOUD_CONFIG_IMPOSSIBLE_TO_PARSE_ADDR,
+    SCLOUD_CONFIG_INVALID_SERVER_PORT,
+    SCLOUD_CONFIG_INVALID_MAX_UDP_PAYLOAD,
+    SCLOUD_CONFIG_INVALID_DNS_LIMITS,
+    SCLOUD_CONFIG_INVALID_LISTENER,
+    SCLOUD_CONFIG_DUPLICATE_LISTENER_NAME,
+    SCLOUD_CONFIG_INVALID_LISTENER_PORT,
+    SCLOUD_CONFIG_INVALID_LISTENER_PROTOCOLS,
+    SCLOUD_CONFIG_TLS_MISSING_CERT,
+    SCLOUD_CONFIG_TLS_MISSING_KEY,
+    SCLOUD_CONFIG_TLS_REQUIRES_TCP,
+    SCLOUD_CONFIG_INVALID_DOH,
+    SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE,
+    SCLOUD_CONFIG_INVALID_FORWARDER,
+    SCLOUD_CONFIG_DUPLICATE_FORWARDER_NAME,
+    SCLOUD_CONFIG_INVALID_ZONE,
+    SCLOUD_CONFIG_DUPLICATE_ZONE_NAME,
+    SCLOUD_CONFIG_ZONE_MISSING_FILE,
+    SCLOUD_CONFIG_SLAVE_MISSING_MASTERS,
+    SCLOUD_CONFIG_FORWARD_ZONE_MISSING_FORWARDERS,
+    SCLOUD_CONFIG_INVALID_INLINE_ZONE,
+    SCLOUD_CONFIG_UNKNOWN_TSIG_KEY,
+    SCLOUD_CONFIG_MX_MISSING_PRIORITY,
+    SCLOUD_CONFIG_PRIORITY_ON_NON_MX,
+    SCLOUD_CONFIG_INVALID_VIEW,
+    SCLOUD_CONFIG_DUPLICATE_VIEW_NAME,
+    SCLOUD_CONFIG_INVALID_DYNUPDATE,
+    SCLOUD_CONFIG_DYNUPDATE_UNKNOWN_ZONE,
 }
 
 impl SCloudException {
@@ -74,75 +101,75 @@ impl SCloudException {
         match self {
             //HEADER SECTION
             SCloudException::SCLOUD_HEADER_DESERIALIZATION_FAILED => {
-                "Buffer length is less than header length."
+                "[HEADER_SECTION] Buffer length is less than header length."
             }
 
-            SCloudException::SCLOUD_HEADER_BYTES_EMPTY => "The header is empty.",
+            SCloudException::SCLOUD_HEADER_BYTES_EMPTY => "[HEADER_SECTION] The header is empty.",
 
             // QUESTION SECTION
             SCloudException::SCLOUD_QUESTION_DESERIALIZATION_FAILED => {
-                "Buffer length is less than question section length."
+                "[QUESTION_SECTION] Buffer length is less than question section length."
             }
             SCloudException::SCLOUD_QUESTION_SERIALIZATION_FAILED_QNAME_TOO_LONG => {
-                "`q_name` too long."
+                "[QUESTION_SECTION] `q_name` too long."
             }
 
             // ANSWER SECTION
             SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED => {
-                "Buffer length is less than answer section length."
+                "[ANSWER_SECTION] Buffer length is less than answer section length."
             }
             SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_LABEL_TOO_LONG => {
-                "Label too long for DNS."
+                "[ANSWER_SECTION] Label too long for DNS."
             }
             SCloudException::SCLOUD_IMPOSSIBLE_PARSE_ANSWER_HEADER_TOO_SHORT => {
-                "Failed to parse DNS answer section: not enough bytes for TYPE, CLASS, TTL, and RDLENGTH."
+                "[ANSWER_SECTION] Failed to parse DNS answer section: not enough bytes for TYPE, CLASS, TTL, and RDLENGTH."
             }
             SCloudException::SCLOUD_IMPOSSIBLE_PARSE_ANSWER_RDATA_OUT_OF_BOUNDS => {
-                "Failed to parse DNS answer section: RDLENGTH exceeds remaining buffer size."
+                "[ANSWER_SECTION] Failed to parse DNS answer section: RDLENGTH exceeds remaining buffer size."
             }
 
             // AUTHORITY SECTION
             SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_RDATA_OUT_OF_BOUNDS => {
-                "Buffer length is less than authority section length."
+                "[AUTHORITY_SECTION] Buffer length is less than authority section length."
             }
             SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_BUF_TOO_SHORT => {
-                "Impossible to deserialize, `buf.len()` is lower than `pos+10`. (buf too short)"
+                "[AUTHORITY_SECTION] Impossible to deserialize, `buf.len()` is lower than `pos+10`. (buf too short)"
             }
 
             // ADDITIONAL SECTION
             SCloudException::SCLOUD_ADDITIONAL_DESERIALIZATION_FAILED => {
-                "Buffer length is less than additional section length."
+                "[ADDITIONAL_SECTION] Buffer length is less than additional section length."
             }
             SCloudException::SCLOUD_ADDITIONAL_DESERIALIZATION_FAILED_BUF_TOO_SHORT => {
-                "Impossible to deserialize, `buf.len()` is lower than `pos+10`. (buf too short)"
+                "[ADDITIONAL_SECTION] Impossible to deserialize, `buf.len()` is lower than `pos+10`. (buf too short)"
             }
             SCloudException::SCLOUD_ADDITIONAL_DESERIALIZATION_FAILED_QNAME_TOO_LONG => {
-                "`q_name` too long."
+                "[ADDITIONAL_SECTION] `q_name` too long."
             }
             SCloudException::SCLOUD_ADDITIONAL_DESERIALIZATION_FAILED_RDATA_OUT_OF_BOUNDS => {
-                "Buffer length is less than authority section length."
+                "[ADDITIONAL_SECTION] Buffer length is less than authority section length."
             }
 
             // QNAME
             SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME => {
-                "Impossible to parse the `q_name`, check if a `q_name` is provided."
+                "[QNAME] Impossible to parse the `q_name`, check if a `q_name` is provided."
             }
             SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_GREATER_THAN_BUF => {
-                "Impossible to parse the `q_name`, pos is greater than buffer length."
+                "[QNAME] Impossible to parse the `q_name`, pos is greater than buffer length."
             }
             SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_AND_LEN_GREATER_THAN_BUF => {
-                "Impossible to parse the `q_name`, pos and len are greater than buffer length."
+                "[QNAME] Impossible to parse the `q_name`, pos and len are greater than buffer length."
             }
             SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_COMPRESSION_FAILED => {
-                "Impossible to parse the `q_name`, compression 0xC0xx failed."
+                "[QNAME] Impossible to parse the `q_name`, compression 0xC0xx failed."
             }
 
             // QTYPE
-            SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE => "Unknown `q_type`.",
+            SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE => "[QTYPE] Unknown `q_type`.",
 
             //QCLASS
-            SCloudException::SCLOUD_QCLASS_U16_FOR_DNSCLASS_UNKNOWN => "Unknown `q_class`.",
-            SCloudException::SCLOUD_QCLASS_DNSCLASS_FOR_U16_UNKNOWN => "Unknown `q_class`.",
+            SCloudException::SCLOUD_QCLASS_U16_FOR_DNSCLASS_UNKNOWN => "[QCLASS] Unknown `q_class`.",
+            SCloudException::SCLOUD_QCLASS_DNSCLASS_FOR_U16_UNKNOWN => "[QCLASS] Unknown `q_class`.",
 
             // STUB RESOLVER
             SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_ID => {
@@ -196,6 +223,114 @@ impl SCloudException {
             SCloudException::SCLOUD_CONFIG_IMPOSSIBLE_TO_PARSE_ADDR => {
                 "[SCLOUD_CONFIG] Error while parsing the IP address."
             }
+            SCloudException::SCLOUD_CONFIG_INVALID_SERVER_PORT => {
+                "[SCLOUD_CONFIG] Invalid server port (must be between 1 and 65535)."
+            }
+
+            SCloudException::SCLOUD_CONFIG_INVALID_MAX_UDP_PAYLOAD => {
+                "[SCLOUD_CONFIG] Invalid max UDP payload size."
+            }
+
+            SCloudException::SCLOUD_CONFIG_INVALID_DNS_LIMITS => {
+                "[SCLOUD_CONFIG] Invalid DNS limits (label length, domain length, or packet size)."
+            }
+
+            SCloudException::SCLOUD_CONFIG_INVALID_LISTENER => {
+                "[SCLOUD_CONFIG] Invalid listener configuration."
+            }
+
+            SCloudException::SCLOUD_CONFIG_DUPLICATE_LISTENER_NAME => {
+                "[SCLOUD_CONFIG] Duplicate listener name detected."
+            }
+
+            SCloudException::SCLOUD_CONFIG_INVALID_LISTENER_PORT => {
+                "[SCLOUD_CONFIG] Invalid listener port."
+            }
+
+            SCloudException::SCLOUD_CONFIG_INVALID_LISTENER_PROTOCOLS => {
+                "[SCLOUD_CONFIG] Listener has no valid protocol defined."
+            }
+
+            SCloudException::SCLOUD_CONFIG_TLS_MISSING_CERT => {
+                "[SCLOUD_CONFIG] TLS enabled but certificate path is missing."
+            }
+
+            SCloudException::SCLOUD_CONFIG_TLS_MISSING_KEY => {
+                "[SCLOUD_CONFIG] TLS enabled but private key path is missing."
+            }
+
+            SCloudException::SCLOUD_CONFIG_TLS_REQUIRES_TCP => {
+                "[SCLOUD_CONFIG] TLS listeners require TCP support."
+            }
+
+            SCloudException::SCLOUD_CONFIG_INVALID_DOH => {
+                "[SCLOUD_CONFIG] Invalid DNS-over-HTTPS (DoH) configuration."
+            }
+
+            SCloudException::SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE => {
+                "[SCLOUD_CONFIG] Unknown or invalid ACL reference."
+            }
+
+            SCloudException::SCLOUD_CONFIG_INVALID_FORWARDER => {
+                "[SCLOUD_CONFIG] Invalid forwarder configuration."
+            }
+
+            SCloudException::SCLOUD_CONFIG_DUPLICATE_FORWARDER_NAME => {
+                "[SCLOUD_CONFIG] Duplicate forwarder name detected."
+            }
+
+            SCloudException::SCLOUD_CONFIG_INVALID_ZONE => {
+                "[SCLOUD_CONFIG] Invalid DNS zone configuration."
+            }
+
+            SCloudException::SCLOUD_CONFIG_DUPLICATE_ZONE_NAME => {
+                "[SCLOUD_CONFIG] Duplicate zone name detected."
+            }
+
+            SCloudException::SCLOUD_CONFIG_ZONE_MISSING_FILE => {
+                "[SCLOUD_CONFIG] Zone file path is missing."
+            }
+
+            SCloudException::SCLOUD_CONFIG_SLAVE_MISSING_MASTERS => {
+                "[SCLOUD_CONFIG] Slave zone has no master servers defined."
+            }
+
+            SCloudException::SCLOUD_CONFIG_FORWARD_ZONE_MISSING_FORWARDERS => {
+                "[SCLOUD_CONFIG] Forward zone has no forwarders defined."
+            }
+
+            SCloudException::SCLOUD_CONFIG_INVALID_INLINE_ZONE => {
+                "[SCLOUD_CONFIG] Inline zone is invalid (missing records or SOA)."
+            }
+
+            SCloudException::SCLOUD_CONFIG_UNKNOWN_TSIG_KEY => {
+                "[SCLOUD_CONFIG] Referenced TSIG key does not exist."
+            }
+
+            SCloudException::SCLOUD_CONFIG_MX_MISSING_PRIORITY => {
+                "[SCLOUD_CONFIG] MX record is missing priority field."
+            }
+
+            SCloudException::SCLOUD_CONFIG_PRIORITY_ON_NON_MX => {
+                "[SCLOUD_CONFIG] Priority field is only allowed on MX records."
+            }
+
+            SCloudException::SCLOUD_CONFIG_INVALID_VIEW => {
+                "[SCLOUD_CONFIG] Invalid DNS view configuration."
+            }
+
+            SCloudException::SCLOUD_CONFIG_DUPLICATE_VIEW_NAME => {
+                "[SCLOUD_CONFIG] Duplicate view name detected."
+            }
+
+            SCloudException::SCLOUD_CONFIG_INVALID_DYNUPDATE => {
+                "[SCLOUD_CONFIG] Invalid dynamic update configuration."
+            }
+
+            SCloudException::SCLOUD_CONFIG_DYNUPDATE_UNKNOWN_ZONE => {
+                "[SCLOUD_CONFIG] Dynamic update references an unknown zone."
+            }
+            _ => "[SCLOUD] Unknown error.",
         }
     }
 }

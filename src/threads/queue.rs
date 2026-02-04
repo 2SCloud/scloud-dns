@@ -7,6 +7,7 @@ use lapin::{
 };
 use crate::threads::task::ScloudWorkerTask;
 
+#[allow(unused)]
 pub async fn send_task_and_wait(
     conn: &Connection,
     task: &ScloudWorkerTask,
