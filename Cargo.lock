@@ -7,7 +7,7 @@ name = "SCloudDNS"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "executor-trait 2.1.2",
+ "executor-trait 3.1.0",
  "futures-util",
  "lapin",
  "libc",
@@ -20,7 +20,7 @@ dependencies = [
  "strum_macros",
  "tempfile",
  "tokio",
- "tokio-executor-trait",
+ "tokio-executor-trait 3.1.0",
  "tokio-reactor-trait",
  "uuid",
  "winapi",
@@ -1788,6 +1788,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-executor-trait"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a7fe39b60ffe238db070f2e66fab42c3c2967482e2fbf754afd7e65525cf0da"
+dependencies = [
+ "async-trait",
+ "executor-trait 2.1.2",
+ "executor-trait 3.1.0",
+ "tokio",
+ "tokio-executor-trait 2.4.0",
+]
+
+[[package]]
 name = "tokio-macros"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1800,14 +1813,14 @@ dependencies = [
 
 [[package]]
 name = "tokio-reactor-trait"
-version = "3.9.0"
+version = "4.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "910df5b7ec6f1ac0b06ae5500382ffb4785b7fef218ddf065f18ca3fb67bc7fc"
+checksum = "e5410ef3f06b4ca0b3868bebeb24e19fef3a05e2ad086f2b8230f2bdf4052cdf"
 dependencies = [
  "async-trait",
  "futures-core",
  "futures-io",
- "reactor-trait 2.8.0",
+ "reactor-trait 3.1.1",
  "tokio",
  "tokio-stream",
  "tokio-util",

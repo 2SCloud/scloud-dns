@@ -22,11 +22,11 @@ uuid = { version = "1.20.0", features = ["v4", "serde"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 lapin = { version = "=3.7.2", features = ["rustls"] }
-executor-trait = "2"
-reactor-trait = "3"
+executor-trait = "3.1.0"
+reactor-trait = "3.1.1"
 
-tokio-executor-trait = "2"
-tokio-reactor-trait = "3"
+tokio-executor-trait = "3.1.0"
+tokio-reactor-trait = "4.1.1"
 
 futures-util = "0.3"
 
