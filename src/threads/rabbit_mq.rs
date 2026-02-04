@@ -1,6 +1,6 @@
 use lapin::{Connection, ConnectionProperties};
 use tokio_executor_trait::Tokio as TokioExecutor;
-use tokio_reactor_trait::Tokio as TokioReactor;
+use async_reactor_trait::AsyncIo;
 
 #[allow(unused)]
 pub async fn connect() -> anyhow::Result<Connection> {
@@ -9,7 +9,7 @@ pub async fn connect() -> anyhow::Result<Connection> {
 
     let props = ConnectionProperties::default()
         .with_executor(TokioExecutor::current())
-        .with_reactor(TokioReactor::current());
+        .with_reactor(AsyncIo);
 
     Ok(Connection::connect(&addr, props).await?)
 }
