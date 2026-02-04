@@ -7,13 +7,11 @@ name = "SCloudDNS"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "executor-trait 3.1.0",
  "futures-util",
  "lapin",
  "libc",
  "nix",
  "rand",
- "reactor-trait 3.1.1",
  "serde",
  "serde_json",
  "strum",
