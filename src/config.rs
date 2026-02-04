@@ -4,10 +4,10 @@
 //! JSON configuration you provided. It includes helpers to load the config
 //! from a file and a light `validate()` method placeholder you can extend.
 
-use std::collections::HashSet;
 use crate::exceptions::SCloudException;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
@@ -102,10 +102,10 @@ impl Config {
 
     /// Validation hook
     pub fn validate(&self) -> Result<(), SCloudException> {
-
         let acl_names: HashSet<&str> = self.acl.iter().map(|a| a.name.as_str()).collect();
         let tsig_names: HashSet<&str> = self.tsig_key.iter().map(|t| t.name.as_str()).collect();
-        let _forwarder_names: HashSet<&str> = self.forwarder.iter().map(|f| f.name.as_str()).collect();
+        let _forwarder_names: HashSet<&str> =
+            self.forwarder.iter().map(|f| f.name.as_str()).collect();
 
         let is_acl_ref_valid = |s: &str| -> bool {
             if s.trim().is_empty() {
@@ -162,10 +162,24 @@ impl Config {
         }
 
         if self.doh.enabled {
-            if self.doh.tls_cert_path.as_deref().unwrap_or("").trim().is_empty() {
+            if self
+                .doh
+                .tls_cert_path
+                .as_deref()
+                .unwrap_or("")
+                .trim()
+                .is_empty()
+            {
                 return Err(SCloudException::SCLOUD_CONFIG_TLS_MISSING_CERT);
             }
-            if self.doh.tls_key_path.as_deref().unwrap_or("").trim().is_empty() {
+            if self
+                .doh
+                .tls_key_path
+                .as_deref()
+                .unwrap_or("")
+                .trim()
+                .is_empty()
+            {
                 return Err(SCloudException::SCLOUD_CONFIG_TLS_MISSING_KEY);
             }
             if self.doh.paths.is_empty() {
@@ -216,7 +230,10 @@ impl Config {
                         if z.records.is_empty() {
                             return Err(SCloudException::SCLOUD_CONFIG_INVALID_INLINE_ZONE);
                         }
-                        let has_soa = z.records.iter().any(|r| r.r#type.eq_ignore_ascii_case("SOA"));
+                        let has_soa = z
+                            .records
+                            .iter()
+                            .any(|r| r.r#type.eq_ignore_ascii_case("SOA"));
                         if !has_soa {
                             return Err(SCloudException::SCLOUD_CONFIG_INVALID_INLINE_ZONE);
                         }
@@ -439,7 +456,7 @@ pub struct WorkersConfig {
     pub sender: u16,
     pub cache_janitor: u16,
     pub metrics: u16,
-    pub tcp_acceptor: u16
+    pub tcp_acceptor: u16,
 }
 
 impl Default for WorkersConfig {
@@ -448,7 +465,7 @@ impl Default for WorkersConfig {
             listener: 5,
             decoder: 5,
             query_dispatcher: 3,
-            cache_lookup:  3,
+            cache_lookup: 3,
             zone_manager: 1,
             resolver: 5,
             cache_writer: 1,
@@ -456,28 +473,82 @@ impl Default for WorkersConfig {
             sender: 5,
             cache_janitor: 1,
             metrics: 2,
-            tcp_acceptor: 1
+            tcp_acceptor: 1,
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoggingConfig {
-    pub level: String,
-    pub format: String,
+    pub level: LogLevel,
+    pub format: LogFormat,
     pub file: String,
     pub rotate: bool,
+    pub live_print: bool,
     pub max_size_mb: u64,
 }
 
 impl Default for LoggingConfig {
     fn default() -> Self {
         LoggingConfig {
-            level: "info".to_string(),
-            format: "json".to_string(),
+            level: LogLevel::INFO,
+            format: LogFormat::TEXT,
             file: "/var/log/scloud-dns/scloud-dns.log".to_string(),
             rotate: true,
+            live_print: false,
             max_size_mb: 200,
+        }
+    }
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum LogLevel {
+    TRACE = 0,
+    DEBUG = 1,
+    INFO = 2,
+    WARN = 3,
+    ERROR = 4,
+    FATAL = 5,
+}
+
+impl LogLevel {
+    pub fn parse(s: &str) -> Self {
+        match s.to_ascii_lowercase().as_str() {
+            "trace" => Self::TRACE,
+            "debug" => Self::DEBUG,
+            "info" => Self::INFO,
+            "warn" | "warning" => Self::WARN,
+            "error" => Self::ERROR,
+            "fatal" => Self::FATAL,
+            _ => Self::WARN,
+        }
+    }
+
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            Self::TRACE => "trace",
+            Self::DEBUG => "debug",
+            Self::INFO => "info",
+            Self::WARN => "warn",
+            Self::ERROR => "error",
+            Self::FATAL => "fatal",
+        }
+    }
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Eq)]
+pub enum LogFormat {
+    JSON,
+    TEXT,
+}
+
+impl LogFormat {
+    pub fn parse(s: &str) -> Self {
+        match s.to_ascii_lowercase().as_str() {
+            "json" => Self::JSON,
+            _ => Self::TEXT,
         }
     }
 }

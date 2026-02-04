@@ -12,24 +12,25 @@
     "bind_port": 53
   },
   "workers": {
-    "listener": 5,
-    "decoder": 5,
-    "query_dispatcher": 3,
-    "cache_lookup":  3,
-    "zone_manager": 1,
-    "resolver": 5,
-    "cache_writer": 1,
-    "encoder": 5,
-    "sender": 5,
-    "cache_janitor": 1,
-    "metrics": 2,
+    "listener": 4,
+    "decoder": 4,
+    "query_dispatcher": 1,
+    "cache_lookup": 0,
+    "zone_manager": 0,
+    "resolver": 4,
+    "cache_writer": 0,
+    "encoder": 4,
+    "sender": 4,
+    "cache_janitor": 0,
+    "metrics": 1,
     "tcp_acceptor": 1
   },
   "logging": {
-    "level": "warn",
+    "level": "info",
     "format": "json",
     "file": "/var/log/scloud-dns/scloud-dns.log",
     "rotate": true,
+    "live_print": true,
     "max_size_mb": 200
   },
   "metrics": {
