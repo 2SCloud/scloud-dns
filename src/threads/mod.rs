@@ -4,9 +4,10 @@ use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
 use std::thread::Thread;
-use crate::log_debug;
+use crate::{log_debug, utils};
 use tokio::sync::Semaphore;
 use std::sync::Arc;
+use futures_util::task::Spawn;
 
 pub(crate) mod task;
 pub(crate) mod tests;
@@ -70,6 +71,7 @@ pub(crate) struct SCloudWorker {
     // IDENTITY
     pub(crate) worker_id: u64,
     pub(crate) os_thread_id: AtomicU64,
+    pub(crate) os_thread_name: String,
     pub(crate) worker_type: WorkerType,
 
     // RESOURCES/LIMITS
@@ -117,10 +119,17 @@ pub(crate) struct SCloudWorker {
 impl SCloudWorker {
     const NEVER_APPLIED: u8 = 0xFF;
 
-    pub(crate) fn new(worker_id: u64, worker_type: WorkerType) -> Self {
-        Self {
+    pub(crate) fn new(worker_id: u64, worker_type: WorkerType) -> Result<Self, SCloudException> {
+
+        let thread_name = match worker_type {
+            WorkerType::LISTENER => format!("listener-{}", utils::uuid::generate_uuid()),
+            _ => return Err(SCloudException::SCLOUD_THREADS_SPAWN_CONFIG_WORKER_TYPE_MISMATCH),
+        };
+
+        Ok(Self {
             worker_id,
             os_thread_id: AtomicU64::new(0),
+            os_thread_name: thread_name,
             worker_type,
             stack_size_bytes: AtomicUsize::new(2 * 1024 * 1024),
             buffer_budget_bytes: AtomicUsize::new(4 * 1024 * 1024),
@@ -146,7 +155,7 @@ impl SCloudWorker {
             last_task_id_hi: AtomicU64::new(0),
             last_task_id_lo: AtomicU64::new(0),
             consumer_tag_hash: AtomicU64::new(0),
-        }
+        })
     }
 
     pub(crate) async fn run(self: Arc<Self>) -> Result<(), SCloudException> {
@@ -627,6 +636,7 @@ impl PriorityScope {
     }
 }
 
+#[derive(Clone)]
 pub struct SpawnConfig<'a> {
     pub name: Option<&'a str>,
     pub stack_size: Option<usize>,

@@ -100,6 +100,7 @@ pub enum SCloudException {
 
     // THREADS
     SCLOUD_THREADS_FAILED_TO_SPAWN,
+    SCLOUD_THREADS_SPAWN_CONFIG_WORKER_TYPE_MISMATCH,
 
     // WORKER
     SCLOUD_WORKER_FAILED_TO_SPAWN,
@@ -334,6 +335,9 @@ impl SCloudException {
             // THREADS
             SCloudException::SCLOUD_THREADS_FAILED_TO_SPAWN => {
                 "[SCLOUD_THREADS] Impossible to spawn a thread."
+            }
+            SCloudException::SCLOUD_THREADS_SPAWN_CONFIG_WORKER_TYPE_MISMATCH => {
+                "[SCLOUD_THREADS] Worker type mismatch for SpawnConfig::init()."
             }
 
             // WORKER
