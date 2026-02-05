@@ -96,7 +96,7 @@ mod tests {
         let cache = CacheConfig::default();
         let recursion = RecursionConfig::default();
         assert!(cache.enabled);
-        assert!(recursion.enabled);
+        assert!(!recursion.enabled);
         assert_eq!(recursion.max_recursive_queries, 50);
     }
 
@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_get_forwarder_addr_by_index() {
-        let cfg = Config::from_file(Path::new("./config/config.json")).unwrap();
+        let cfg = Config::from_file(Path::new("./config/config.json").into()).unwrap();
 
         assert_ne!(
             cfg.try_get_forwarder_addr_by_index(2, 0).unwrap(),

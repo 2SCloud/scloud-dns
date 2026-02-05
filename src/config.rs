@@ -503,6 +503,7 @@ impl Default for LoggingConfig {
 
 #[allow(non_camel_case_types)]
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "lowercase")]
 pub enum LogLevel {
     TRACE = 0,
     DEBUG = 1,
@@ -539,6 +540,7 @@ impl LogLevel {
 
 #[allow(non_camel_case_types)]
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
 pub enum LogFormat {
     JSON,
     TEXT,
@@ -748,7 +750,7 @@ pub struct RecursionConfig {
 impl Default for RecursionConfig {
     fn default() -> Self {
         RecursionConfig {
-            enabled: true,
+            enabled: false,
             allowed_acl: "internal".to_string(),
             max_recursive_queries: 50,
             recursion_timeout_ms: 5000,
