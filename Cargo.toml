@@ -3,6 +3,10 @@ name = "scloud-dns"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "dns_stress_test"
+path = "src/bin/dns_stress_test.rs"
+
 [dependencies]
 strum = "0.26"
 strum_macros = "0.26"

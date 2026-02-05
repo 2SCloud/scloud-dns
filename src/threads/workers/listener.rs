@@ -28,7 +28,7 @@ pub async fn run_dns_listener(
         let worker2 = worker.clone();
         tokio::spawn(async move {
             log_debug!("packet from {}: {} bytes", src, packet.len());
-            log_trace!("\tbytes: {:?}", packet);
+            log_trace!("bytes: {:?}", packet);
 
             // ... do stuff ...
 

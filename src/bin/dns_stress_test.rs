@@ -33,7 +33,8 @@ fn build_dns_query_a(qname: &str, id: u16) -> Vec<u8> {
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> anyhow::Result<()> {
     // Usage:
-    // cargo run --release --bin dns_stress_rx -- 127.0.0.1:5353 10 200 0 example.com.
+    // cargo run --release --bin dns_stress_test -- 127.0.0.1:5353 10 20 0 github.com.
+    // 1 worker can handle 19 clients approx. (with my computer performance)
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 5 {
         eprintln!(
