@@ -6,7 +6,7 @@ use uuid::Uuid;
 #[allow(unused)]
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct ScloudWorkerTask {
+pub(crate) struct SCloudWorkerTask {
     pub task_id: Uuid,
     pub for_type: WorkerType,
     pub for_who: u64,

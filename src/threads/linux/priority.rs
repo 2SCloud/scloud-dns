@@ -4,6 +4,7 @@ pub(crate) mod imp {
     use std::io;
 
     pub(crate) fn set_priority(scope: PriorityScope, p: ThreadPriority) -> io::Result<()> {
+        // TODO: Impl to `SCloudWorker` so instead of `getuid().as_raw()` use `self.os_thread_id`
         let nice: i32 = match p {
             ThreadPriority::IDLE => 19,
             ThreadPriority::LOW => 10,

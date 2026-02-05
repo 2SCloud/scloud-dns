@@ -1,13 +1,17 @@
 use crate::exceptions::SCloudException;
-use crate::threads::task::ScloudWorkerTask;
-use crate::{log_debug, utils};
 use anyhow::Result;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
+use std::thread::Thread;
+use crate::log_debug;
+use tokio::sync::Semaphore;
+use std::sync::Arc;
 
 pub(crate) mod task;
 pub(crate) mod tests;
+pub(crate) mod queue;
+pub(crate) mod workers;
 
 #[cfg(windows)]
 mod windows;
@@ -20,8 +24,6 @@ mod macos;
 
 #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 mod others;
-mod queue;
-mod workers;
 
 #[cfg(windows)]
 mod thread {
@@ -64,7 +66,7 @@ mod thread {
 ///
 /// Incoming:
 /// - CPU affinity/processor binding
-pub(crate) struct ScloudWorker {
+pub(crate) struct SCloudWorker {
     // IDENTITY
     pub(crate) worker_id: u64,
     pub(crate) os_thread_id: AtomicU64,
@@ -88,8 +90,9 @@ pub(crate) struct ScloudWorker {
     pub(crate) shutdown_mode: AtomicU8,
 
     // BACKPRESSURE/IN-FLIGHT
-    pub(crate) in_flight: AtomicUsize,     // should be 0/1
-    pub(crate) max_in_flight: AtomicUsize, // prefetch/internal pool
+    pub(crate) in_flight: AtomicUsize, // for metrics
+    pub(crate) in_flight_sem: Arc<Semaphore>,
+    pub(crate) max_in_flight: AtomicUsize,
 
     // METRICS
     pub(crate) jobs_done: AtomicU64,
@@ -111,7 +114,7 @@ pub(crate) struct ScloudWorker {
 }
 
 #[allow(unused)]
-impl ScloudWorker {
+impl SCloudWorker {
     const NEVER_APPLIED: u8 = 0xFF;
 
     pub(crate) fn new(worker_id: u64, worker_type: WorkerType) -> Self {
@@ -131,6 +134,7 @@ impl ScloudWorker {
             shutdown_requested: AtomicBool::new(false),
             shutdown_mode: AtomicU8::new(ShutdownMode::GRACEFUL as u8),
             in_flight: AtomicUsize::new(0),
+            in_flight_sem: Arc::new(Semaphore::new(512)),
             max_in_flight: AtomicUsize::new(1),
             jobs_done: AtomicU64::new(0),
             jobs_failed: AtomicU64::new(0),
@@ -145,11 +149,16 @@ impl ScloudWorker {
         }
     }
 
-    pub(crate) async fn run(&self) -> Result<(), SCloudException> {
-        // TODO: check the type of worker and adapt what is doing
-        match self.worker_type {
+    pub(crate) async fn run(self: Arc<Self>) -> Result<(), SCloudException> {
+        let worker = self.as_ref();
+
+        log_debug!("Running SCloudWorker -> [ID: {}][TYPE: {:?}]", worker.worker_id, worker.worker_type);
+        match worker.worker_type {
             WorkerType::LISTENER => {
 
+                workers::listener::run_dns_listener(self, "0.0.0.0:5353")
+                    .await
+                    .map_err(|_| SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED)?;;
             }
             WorkerType::DECODER => {
 
@@ -264,6 +273,11 @@ impl ScloudWorker {
     #[inline]
     pub fn get_in_flight(&self) -> usize {
         self.in_flight.load(Ordering::Relaxed)
+    }
+
+    #[inline]
+    pub fn get_in_flight_sem(&self) -> Arc<Semaphore> {
+        self.in_flight_sem.clone()
     }
 
     #[inline]
@@ -628,7 +642,7 @@ impl<'a> Default for SpawnConfig<'a> {
 }
 
 #[allow(unused)]
-pub fn new<F, T>(cfg: SpawnConfig<'_>, f: F) -> std::thread::JoinHandle<T>
+pub fn new<F, T>(cfg: SpawnConfig<'_>, f: F) -> Result<std::thread::JoinHandle<T>, SCloudException>
 where
     F: FnOnce() -> T + Send + 'static,
     T: Send + 'static,
@@ -636,8 +650,10 @@ where
     thread::thread_base::new(cfg, f)
 }
 
+// TODO: Impl that to SCloudWorker and modify it (he will take the os_thread_id linked to the worker)
 // TODO: should return an ScloudException
 #[allow(unused)]
 pub fn set_priority(scope: PriorityScope, p: ThreadPriority) -> std::io::Result<()> {
     thread::priority::set_priority(scope, p)
 }
+

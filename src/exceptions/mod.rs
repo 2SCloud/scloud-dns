@@ -93,6 +93,20 @@ pub enum SCloudException {
     SCLOUD_CONFIG_DUPLICATE_VIEW_NAME,
     SCLOUD_CONFIG_INVALID_DYNUPDATE,
     SCLOUD_CONFIG_DYNUPDATE_UNKNOWN_ZONE,
+
+    // LOGGING
+    SCLOUD_LOGGING_PATH_CREATION_FAILED,
+    SCLOUD_LOGGING_FILE_CREATION_OR_OPENING_FAILED,
+
+    // THREADS
+    SCLOUD_THREADS_FAILED_TO_SPAWN,
+
+    // WORKER
+    SCLOUD_WORKER_FAILED_TO_SPAWN,
+    SCLOUD_WORKER_LISTENER_BIND_FAILED,
+
+    // LISTENER
+    SCLOUD_WORKER_LISTENER_RECV_FAILED,
 }
 
 impl SCloudException {
@@ -230,109 +244,109 @@ impl SCloudException {
             SCloudException::SCLOUD_CONFIG_INVALID_SERVER_PORT => {
                 "[SCLOUD_CONFIG] Invalid server port (must be between 1 and 65535)."
             }
-
             SCloudException::SCLOUD_CONFIG_INVALID_MAX_UDP_PAYLOAD => {
                 "[SCLOUD_CONFIG] Invalid max UDP payload size."
             }
-
             SCloudException::SCLOUD_CONFIG_INVALID_DNS_LIMITS => {
                 "[SCLOUD_CONFIG] Invalid DNS limits (label length, domain length, or packet size)."
             }
-
             SCloudException::SCLOUD_CONFIG_INVALID_LISTENER => {
                 "[SCLOUD_CONFIG] Invalid listener configuration."
             }
-
             SCloudException::SCLOUD_CONFIG_DUPLICATE_LISTENER_NAME => {
                 "[SCLOUD_CONFIG] Duplicate listener name detected."
             }
-
             SCloudException::SCLOUD_CONFIG_INVALID_LISTENER_PORT => {
                 "[SCLOUD_CONFIG] Invalid listener port."
             }
-
             SCloudException::SCLOUD_CONFIG_INVALID_LISTENER_PROTOCOLS => {
                 "[SCLOUD_CONFIG] Listener has no valid protocol defined."
             }
-
             SCloudException::SCLOUD_CONFIG_TLS_MISSING_CERT => {
                 "[SCLOUD_CONFIG] TLS enabled but certificate path is missing."
             }
-
             SCloudException::SCLOUD_CONFIG_TLS_MISSING_KEY => {
                 "[SCLOUD_CONFIG] TLS enabled but private key path is missing."
             }
-
             SCloudException::SCLOUD_CONFIG_TLS_REQUIRES_TCP => {
                 "[SCLOUD_CONFIG] TLS listeners require TCP support."
             }
-
             SCloudException::SCLOUD_CONFIG_INVALID_DOH => {
                 "[SCLOUD_CONFIG] Invalid DNS-over-HTTPS (DoH) configuration."
             }
-
             SCloudException::SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE => {
                 "[SCLOUD_CONFIG] Unknown or invalid ACL reference."
             }
-
             SCloudException::SCLOUD_CONFIG_INVALID_FORWARDER => {
                 "[SCLOUD_CONFIG] Invalid forwarder configuration."
             }
-
             SCloudException::SCLOUD_CONFIG_DUPLICATE_FORWARDER_NAME => {
                 "[SCLOUD_CONFIG] Duplicate forwarder name detected."
             }
-
             SCloudException::SCLOUD_CONFIG_INVALID_ZONE => {
                 "[SCLOUD_CONFIG] Invalid DNS zone configuration."
             }
-
             SCloudException::SCLOUD_CONFIG_DUPLICATE_ZONE_NAME => {
                 "[SCLOUD_CONFIG] Duplicate zone name detected."
             }
-
             SCloudException::SCLOUD_CONFIG_ZONE_MISSING_FILE => {
                 "[SCLOUD_CONFIG] Zone file path is missing."
             }
-
             SCloudException::SCLOUD_CONFIG_SLAVE_MISSING_MASTERS => {
                 "[SCLOUD_CONFIG] Slave zone has no master servers defined."
             }
-
             SCloudException::SCLOUD_CONFIG_FORWARD_ZONE_MISSING_FORWARDERS => {
                 "[SCLOUD_CONFIG] Forward zone has no forwarders defined."
             }
-
             SCloudException::SCLOUD_CONFIG_INVALID_INLINE_ZONE => {
                 "[SCLOUD_CONFIG] Inline zone is invalid (missing records or SOA)."
             }
-
             SCloudException::SCLOUD_CONFIG_UNKNOWN_TSIG_KEY => {
                 "[SCLOUD_CONFIG] Referenced TSIG key does not exist."
             }
-
             SCloudException::SCLOUD_CONFIG_MX_MISSING_PRIORITY => {
                 "[SCLOUD_CONFIG] MX record is missing priority field."
             }
-
             SCloudException::SCLOUD_CONFIG_PRIORITY_ON_NON_MX => {
                 "[SCLOUD_CONFIG] Priority field is only allowed on MX records."
             }
-
             SCloudException::SCLOUD_CONFIG_INVALID_VIEW => {
                 "[SCLOUD_CONFIG] Invalid DNS view configuration."
             }
-
             SCloudException::SCLOUD_CONFIG_DUPLICATE_VIEW_NAME => {
                 "[SCLOUD_CONFIG] Duplicate view name detected."
             }
-
             SCloudException::SCLOUD_CONFIG_INVALID_DYNUPDATE => {
                 "[SCLOUD_CONFIG] Invalid dynamic update configuration."
             }
-
             SCloudException::SCLOUD_CONFIG_DYNUPDATE_UNKNOWN_ZONE => {
                 "[SCLOUD_CONFIG] Dynamic update references an unknown zone."
+            }
+
+            // LOGGING
+            SCloudException::SCLOUD_LOGGING_PATH_CREATION_FAILED => {
+                "[SCLOUD_LOGGING] Logging path creation failed."
+            }
+            SCloudException::SCLOUD_LOGGING_FILE_CREATION_OR_OPENING_FAILED => {
+                "[SCLOUD_LOGGING] Log file creation/opening failed."
+            }
+
+            // THREADS
+            SCloudException::SCLOUD_THREADS_FAILED_TO_SPAWN => {
+                "[SCLOUD_THREADS] Impossible to spawn a thread."
+            }
+
+            // WORKER
+            SCloudException::SCLOUD_WORKER_FAILED_TO_SPAWN => {
+                "[SCLOUD_WORKER] Failed to link the worker to the thread, and cannot spawn a worker."
+            }
+            SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED => {
+                "[SCLOUD_WORKER] Listener bind just failed at 'threads::run(&self)'."
+            }
+
+            // LISTENER
+            SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED => {
+                ""
             }
             _ => "[SCLOUD] Unknown error.",
         }

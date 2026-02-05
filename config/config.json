@@ -26,8 +26,8 @@
     "tcp_acceptor": 1
   },
   "logging": {
-    "level": "info",
-    "format": "json",
+    "level": "trace",
+    "format": "text",
     "file": "/var/log/scloud-dns/scloud-dns.log",
     "rotate": true,
     "live_print": true,
