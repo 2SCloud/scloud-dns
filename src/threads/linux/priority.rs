@@ -32,6 +32,7 @@ pub(crate) mod imp {
         }
     }
 
+    #[allow(unused)]
     pub(crate) fn set_class_priority(p: ClassPriority) -> io::Result<()> {
         let nice = p.to_unix_nice();
         let pid: libc::id_t = getpid().as_raw() as libc::id_t;
@@ -49,6 +50,7 @@ pub(crate) mod imp {
         io::Error::from_raw_os_error(e as i32)
     }
 
+    #[allow(unused)]
     fn apply_unix_nice(priority_class: ClassPriority) -> io::Result<()> {
         let nice = priority_class.to_unix_nice();
 

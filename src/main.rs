@@ -13,6 +13,7 @@ mod utils;
 
 fn main() {
     let config = Config::from_file(Path::new("./config/config.json")).unwrap();
+    let _ = utils::logging::init(config.logging.clone());
     // let resolver = StubResolver::new(config.try_get_forwarder_addr_by_index(2, 0).unwrap());
     let resolver = StubResolver::new(config.try_get_forwarder_addr_by_name("cloudflare").unwrap());
     println!(
