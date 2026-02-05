@@ -33,7 +33,11 @@ Clone the project and build with Cargo:
 ```bash
 git clone https://github.com/2SCloud/scloud-dns.git
 cd scloud-dns
-cargo build --release
+cargo run --release --package scloud-dns --bin scloud-dns
+sudo mkdir -p /var/log/scloud-dns
+sudo chown -R $USER:$USER /var/log/scloud-dns
+cd target/release
+./scloud-dns
 ```
 
 The compiled binary will be located in `target/release/scloud-dns`.
