@@ -122,7 +122,7 @@ impl SCloudWorker {
     pub(crate) fn new(worker_id: u64, worker_type: WorkerType) -> Result<Self, SCloudException> {
 
         let thread_name = match worker_type {
-            WorkerType::LISTENER => format!("listener-{}", utils::uuid::generate_uuid()),
+            WorkerType::LISTENER => format!("scloud-dns-listener-{}", utils::uuid::generate_uuid()),
             _ => return Err(SCloudException::SCLOUD_THREADS_SPAWN_CONFIG_WORKER_TYPE_MISMATCH),
         };
 
