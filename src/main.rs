@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use crate::exceptions::SCloudException;
 use crate::threads::{SCloudWorker, SpawnConfig, WorkerType};
-use crate::threads::workers::RawDnsMsg;
+use crate::threads::task::InFlightTask;
 
 mod config;
 mod dns;
@@ -19,7 +19,7 @@ async fn main() -> Result<(), SCloudException> {
 
     let handle = tokio::runtime::Handle::current();
 
-    let (tx, rx) = mpsc::channel::<RawDnsMsg>(1024);
+    let (tx, rx) = mpsc::channel::<InFlightTask>(1024);
 
     let listener = Arc::new(SCloudWorker::new(1, WorkerType::LISTENER)?);
     let decoder  = Arc::new(SCloudWorker::new(2, WorkerType::DECODER)?);

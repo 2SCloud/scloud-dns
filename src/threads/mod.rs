@@ -8,7 +8,7 @@ use crate::{log_debug, log_error, utils};
 use tokio::sync::{mpsc, Mutex, Semaphore};
 use std::sync::Arc;
 use futures_util::task::Spawn;
-use crate::threads::workers::RawDnsMsg;
+use crate::threads::task::InFlightTask;
 
 pub(crate) mod task;
 pub(crate) mod tests;
@@ -76,8 +76,8 @@ pub(crate) struct SCloudWorker {
     pub(crate) worker_type: WorkerType,
 
     // CHANNEL
-    pub(crate) dns_tx: Mutex<Option<mpsc::Sender<RawDnsMsg>>>,
-    pub(crate) dns_rx: Mutex<Option<mpsc::Receiver<RawDnsMsg>>>,
+    pub(crate) dns_tx: Mutex<Option<mpsc::Sender<InFlightTask>>>,
+    pub(crate) dns_rx: Mutex<Option<mpsc::Receiver<InFlightTask>>>,
 
     // RESOURCES/LIMITS
     pub(crate) stack_size_bytes: AtomicUsize,
@@ -127,8 +127,8 @@ impl SCloudWorker {
     pub(crate) fn new(worker_id: u64, worker_type: WorkerType) -> Result<Self, SCloudException> {
 
         let thread_name = match worker_type {
-            WorkerType::LISTENER => format!("scloud-dns-listener-{}", utils::uuid::generate_uuid()),
-            WorkerType::DECODER  => format!("scloud-dns-decoder-{}", utils::uuid::generate_uuid()),
+            WorkerType::LISTENER => format!("scloud-dns-listener-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
+            WorkerType::DECODER  => format!("scloud-dns-decoder-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
             _ => return Err(SCloudException::SCLOUD_THREADS_SPAWN_CONFIG_WORKER_TYPE_MISMATCH),
         };
 
@@ -373,11 +373,11 @@ impl SCloudWorker {
         self.worker_type = worker_type;
     }
 
-    pub async fn set_dns_tx(&self, tx: mpsc::Sender<RawDnsMsg>) {
+    pub async fn set_dns_tx(&self, tx: mpsc::Sender<InFlightTask>) {
         *self.dns_tx.lock().await = Some(tx);
     }
 
-    pub async fn set_dns_rx(&self, rx: mpsc::Receiver<RawDnsMsg>) {
+    pub async fn set_dns_rx(&self, rx: mpsc::Receiver<InFlightTask>) {
         *self.dns_rx.lock().await = Some(rx);
     }
 

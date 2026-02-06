@@ -1,21 +1,20 @@
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
-use tokio::net::UdpSocket;
+use bytes::Buf;
 use tokio::sync::mpsc;
 use crate::{log_debug, log_trace};
-use crate::dns::packet::DNSPacket;
 use crate::exceptions::SCloudException;
 use crate::threads::SCloudWorker;
-use crate::threads::workers::RawDnsMsg;
+use crate::threads::task::InFlightTask;
 
 pub async fn run_dns_decoder(
     worker: Arc<SCloudWorker>,
-    mut rx: mpsc::Receiver<RawDnsMsg>,
+    mut rx: mpsc::Receiver<InFlightTask>,
 ) -> Result<(), SCloudException> {
-    while let Some(msg) = rx.recv().await {
-        log_debug!("decoder got {} bytes from {}", msg.data.len(), msg.src);
+    loop {
+        while let Some(msg) = rx.recv().await {
+            log_debug!("decoder got {} bytes from {}", msg.task.payload.len(), msg.task.for_who);
+            log_trace!("bytes: {:?}", msg.task.payload.chunk())
+        }
     }
     Ok(())
 }
-
-

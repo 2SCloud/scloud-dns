@@ -10,6 +10,10 @@ pub(crate) fn with_random_id(path: &str) -> String {
     }
 }
 
-pub(crate) fn generate_uuid() -> &'static str {
-    Box::leak(Uuid::new_v4().to_string().into_boxed_str())
+pub(crate) fn generate_uuid() -> Uuid {
+    Uuid::new_v4()
+}
+
+pub(crate) fn uuid_as_static_str(uuid: Uuid) -> &'static str {
+    Box::leak(uuid.to_string().into_boxed_str())
 }
