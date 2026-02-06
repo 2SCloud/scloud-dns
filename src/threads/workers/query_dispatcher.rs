@@ -6,7 +6,7 @@ use crate::exceptions::SCloudException;
 use crate::threads::SCloudWorker;
 use crate::threads::task::InFlightTask;
 
-pub async fn run_dns_decoder(
+pub async fn run_dns_query_dispatcher(
     worker: Arc<SCloudWorker>,
     mut rx: mpsc::Receiver<InFlightTask>,
     mut tx: mpsc::Sender<InFlightTask>,
