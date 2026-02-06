@@ -1,9 +1,11 @@
 pub(crate) mod priority;
 
 pub(crate) mod imp {
+    use crate::exceptions::SCloudException;
+    use crate::log_error;
     use super::super::SpawnConfig;
 
-    pub fn new<F, T>(cfg: SpawnConfig<'_>, f: F) -> std::thread::JoinHandle<T>
+    pub fn new<F, T>(cfg: SpawnConfig<'_>, f: F) -> Result<std::thread::JoinHandle<T>, SCloudException>
     where
         F: FnOnce() -> T + Send + 'static,
         T: Send + 'static,
@@ -16,6 +18,13 @@ pub(crate) mod imp {
             b = b.stack_size(sz);
         }
 
-        b.spawn(f).expect("failed to spawn thread")
+        b.spawn(f).map_err(|_| {
+            log_error!("{}", SCloudException::SCLOUD_THREADS_FAILED_TO_SPAWN.to_str());
+            SCloudException::SCLOUD_THREADS_FAILED_TO_SPAWN
+        })
+    }
+
+    pub fn current_thread_id() -> usize {
+        unsafe { libc::syscall(libc::SYS_gettid) as usize }
     }
 }
