@@ -1,11 +1,20 @@
 pub(crate) mod listener;
+pub(crate) mod decoder;
 
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
+use bytes::Bytes;
 use crate::exceptions::SCloudException;
 use crate::{log_debug, log_error};
 use crate::threads::{SCloudWorker, SpawnConfig, WorkerState};
 use tokio::runtime::Handle;
+
+#[derive(Debug)]
+pub struct RawDnsMsg {
+    pub src: SocketAddr,
+    pub data: Bytes,
+}
 
 pub fn spawn_worker<'a>(
     worker: Arc<SCloudWorker>,
