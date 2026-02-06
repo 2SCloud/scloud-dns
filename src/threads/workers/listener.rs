@@ -1,39 +1,47 @@
-use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::SystemTime;
+use tokio::sync::{mpsc};
+use bytes::{Buf, Bytes};
 use tokio::net::UdpSocket;
-use crate::{log_debug, log_trace};
+use crate::exceptions::SCloudException;
+use crate::threads::{SCloudWorker, WorkerType};
+use crate::threads::task::{InFlightTask, SCloudWorkerTask};
+use crate::utils;
 
 pub async fn run_dns_listener(
-    worker: std::sync::Arc<crate::threads::SCloudWorker>,
+    worker: Arc<SCloudWorker>,
     bind_addr: &str,
-) -> std::io::Result<()> {
-    let socket = UdpSocket::bind(bind_addr).await?;
-    log_debug!("DNS UDP listener bound on {}", bind_addr);
-
+    tx: mpsc::Sender<InFlightTask>,
+) -> Result<(), SCloudException> {
+    let socket = UdpSocket::bind(bind_addr).await.map_err(|_| SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED)?;
     let mut buf = [0u8; 65_535];
 
     loop {
-        let (len, src) = socket.recv_from(&mut buf).await?;
-        let packet = buf[..len].to_vec(); // OK for now but after we need to change it
+        let (len, src) = socket.recv_from(&mut buf).await.map_err(|_| SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED)?;
 
-        let max = worker.max_in_flight.load(Ordering::Relaxed);
-        let cur = worker.in_flight.load(Ordering::Relaxed);
+        let permit = match worker.in_flight_sem.clone().try_acquire_owned() {
+            Ok(p) => p,
+            Err(_) => continue,
+        };
 
-        if cur >= max {
-            // saturated -> drop or rate-limited log
-            continue;
+        let task = SCloudWorkerTask {
+            task_id: utils::uuid::generate_uuid(),
+            for_type: WorkerType::LISTENER,
+            for_who: src,
+            payload: Bytes::copy_from_slice(&buf[..len]),
+            attempts: 0,
+            max_attempts: 0,
+            created_at: SystemTime::now(),
+            deadline_timeout: None,
+            priority: 0,
+            reply_to: None,
+            correlation_id: None,
+        };
+
+        let in_flight = InFlightTask {task, _permit: permit };
+
+        if tx.send(in_flight).await.is_err() {
+            return Ok(());
         }
-
-        worker.in_flight.fetch_add(1, Ordering::Relaxed);
-
-        let worker2 = worker.clone();
-        tokio::spawn(async move {
-            log_debug!("packet from {}: {} bytes", src, packet.len());
-            log_trace!("bytes: {:?}", packet);
-
-            // ... do stuff ...
-
-            worker2.in_flight.fetch_sub(1, Ordering::Relaxed);
-        });
     }
 }
-
