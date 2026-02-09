@@ -5,13 +5,23 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::SystemTime;
 use crate::exceptions::SCloudException;
-use crate::utils::time::{format_system_time, format_unix_timestamp, now_epoch_ms};
+use crate::utils::time::{format_system_time, now_epoch_ms};
+use once_cell::sync::OnceCell;
+use tokio::sync::mpsc;
 
 struct Logger {
     cfg: LoggingConfig,
     file: File,
 }
 
+pub struct OtelLog {
+    pub target: String,
+    pub severity: &'static str,
+    pub message: String,
+    pub timestamp: String,
+}
+
+pub static LOG_SENDER: OnceCell<mpsc::UnboundedSender<OtelLog>> = OnceCell::new();
 static LOGGER: OnceLock<Mutex<Logger>> = OnceLock::new();
 
 /// Initialize global logger.</br>
@@ -139,38 +149,66 @@ fn json_escape(s: &str) -> String {
 }
 
 #[macro_export]
-macro_rules! log_fatal {
-    ($($arg:tt)*) => {
-        $crate::utils::logging::log($crate::config::LogLevel::FATAL, concat!(module_path!(), ":", line!()), &format!($($arg)*))
-    };
+macro_rules! __log_internal {
+    ($lvl:expr, $otel_lvl:expr, $($arg:tt)*) => {{
+        let target = concat!(module_path!(), ":", line!());
+
+        if let Some(sender) = $crate::utils::logging::LOG_SENDER.get() {
+            let _ = sender.send($crate::utils::logging::OtelLog {
+                target: target.to_string(),
+                severity: $otel_lvl,
+                message: format!($($arg)*),
+                timestamp: $crate::utils::time::now_unix_nano(),
+            });
+        }
+
+        $crate::utils::logging::log(
+            $lvl,
+            target,
+            &format!($($arg)*),
+        );
+    }};
 }
-#[macro_export]
-macro_rules! log_error {
-    ($($arg:tt)*) => {
-        $crate::utils::logging::log($crate::config::LogLevel::ERROR, concat!(module_path!(), ":", line!()), &format!($($arg)*))
-    };
-}
-#[macro_export]
-macro_rules! log_warn {
-    ($($arg:tt)*) => {
-        $crate::utils::logging::log($crate::config::LogLevel::WARN, concat!(module_path!(), ":", line!()), &format!($($arg)*))
-    };
-}
-#[macro_export]
-macro_rules! log_info {
-    ($($arg:tt)*) => {
-        $crate::utils::logging::log($crate::config::LogLevel::INFO, concat!(module_path!(), ":", line!()), &format!($($arg)*))
-    };
-}
-#[macro_export]
-macro_rules! log_debug {
-    ($($arg:tt)*) => {
-        $crate::utils::logging::log($crate::config::LogLevel::DEBUG, concat!(module_path!(), ":", line!()), &format!($($arg)*))
-    };
-}
+
 #[macro_export]
 macro_rules! log_trace {
     ($($arg:tt)*) => {
-        $crate::utils::logging::log($crate::config::LogLevel::TRACE, concat!(module_path!(), ":", line!()), &format!($($arg)*))
+        $crate::__log_internal!($crate::config::LogLevel::TRACE, "TRACE", $($arg)*);
     };
 }
+
+#[macro_export]
+macro_rules! log_debug {
+    ($($arg:tt)*) => {
+        $crate::__log_internal!($crate::config::LogLevel::DEBUG, "DEBUG", $($arg)*);
+    };
+}
+
+#[macro_export]
+macro_rules! log_info {
+    ($($arg:tt)*) => {
+        $crate::__log_internal!($crate::config::LogLevel::INFO, "INFO", $($arg)*);
+    };
+}
+
+#[macro_export]
+macro_rules! log_warn {
+    ($($arg:tt)*) => {
+        $crate::__log_internal!($crate::config::LogLevel::WARN, "WARN", $($arg)*);
+    };
+}
+
+#[macro_export]
+macro_rules! log_error {
+    ($($arg:tt)*) => {
+        $crate::__log_internal!($crate::config::LogLevel::ERROR, "ERROR", $($arg)*);
+    };
+}
+
+#[macro_export]
+macro_rules! log_fatal {
+    ($($arg:tt)*) => {
+        $crate::__log_internal!($crate::config::LogLevel::FATAL, "FATAL", $($arg)*);
+    };
+}
+
