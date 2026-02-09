@@ -52,3 +52,10 @@ pub(crate) fn format_system_time(t: SystemTime) -> String {
 
     format_unix_timestamp(secs)
 }
+
+pub fn now_unix_nano() -> String {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+    now.as_nanos().to_string()
+}

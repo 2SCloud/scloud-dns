@@ -130,6 +130,8 @@ impl SCloudWorker {
             WorkerType::LISTENER => format!("scloud-dns-listener-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
             WorkerType::DECODER  => format!("scloud-dns-decoder-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
             WorkerType::QUERY_DISPATCHER => format!("scloud-dns-qd-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
+            WorkerType::RESOLVER => format!("scloud-dns-resolver-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
+            WorkerType::SENDER => format!("scloud-dns-sender-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
             _ => return Err(SCloudException::SCLOUD_THREADS_SPAWN_CONFIG_WORKER_TYPE_MISMATCH),
         };
 
@@ -209,7 +211,15 @@ impl SCloudWorker {
 
             }
             WorkerType::RESOLVER => {
+                let tx = self.dns_tx.lock().await
+                    .as_ref()
+                    .cloned()
+                    .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET)?;
+                let rx = self.dns_rx.lock().await
+                    .take()
+                    .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET)?;
 
+                workers::resolver::run_dns_resolver(self.clone(), rx, tx).await?;
             }
             WorkerType::CACHE_WRITER => {
 
