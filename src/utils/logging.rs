@@ -22,7 +22,7 @@ pub struct OtelLog {
     pub timestamp: String,
 }
 
-pub static LOG_SENDER: OnceCell<mpsc::UnboundedSender<OtelLog>> = OnceCell::new();
+pub static LOG_SENDER: OnceCell<mpsc::Sender<OtelLog>> = OnceCell::new();
 static LOGGER: OnceLock<Mutex<Logger>> = OnceLock::new();
 
 pub fn build_otlp_payload(logs: &[OtelLog]) -> serde_json::Value {

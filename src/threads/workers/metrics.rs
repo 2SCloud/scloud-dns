@@ -12,7 +12,7 @@ pub async fn start_otlp_logger() {
     }
 
     let client = reqwest::Client::new();
-    let url = "http://127.0.0.1:14318/v1/logs";
+    let url = "http://alloy.scloud-observability.svc:4318/v1/logs";
 
     let mut buf: Vec<OtelLog> = Vec::with_capacity(512);
     let mut last_flush = Instant::now();
@@ -42,9 +42,18 @@ async fn flush(client: &reqwest::Client, url: &str, buf: &mut Vec<OtelLog>) {
 
     let res = client.post(url).json(&payload).send().await;
 
-    if let Err(e) = res {
-        eprintln!("OTLP flush failed ({} logs): {e}", buf.len());
+    match res {
+        Ok(r) if !r.status().is_success() => {
+            let status = r.status();
+            let body = r.text().await.unwrap_or_default();
+            eprintln!("OTLP flush failed HTTP {status} ({} logs). Body: {body}", buf.len());
+        }
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("OTLP flush failed ({} logs): {e}", buf.len());
+        }
     }
 
     buf.clear();
+
 }
