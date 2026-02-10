@@ -30,7 +30,7 @@
     "format": "text",
     "file": "/var/log/scloud-dns/scloud-dns.log",
     "rotate": true,
-    "live_print": true,
+    "live_print": false,
     "max_size_mb": 200
   },
   "metrics": {

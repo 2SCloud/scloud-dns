@@ -234,7 +234,7 @@ impl SCloudWorker {
 
             }
             WorkerType::METRICS => {
-
+                workers::metrics::start_otlp_logger().await;
             }
             WorkerType::TCP_ACCEPTOR => {
 
