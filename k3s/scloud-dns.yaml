@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: rust-dns
-          image: ghcr.io/2SCloud/scloud-dns:0.2.0
+          image: ghcr.io/2SCloud/scloud-dns:0.2.1
           imagePullPolicy: IfNotPresent
           ports:
             - name: dns-udp

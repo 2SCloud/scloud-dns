@@ -16,7 +16,7 @@ async fn main() -> Result<(), SCloudException> {
     let config = Config::from_file(Path::new("./config/config.json"))?;
     utils::logging::init(config.logging.clone())?;
 
-    tokio::spawn(crate::threads::workers::metrics::start_otlp_logger());
+    tokio::spawn(threads::workers::metrics::start_otlp_logger());
 
     let (tx_l2d, rx_l2d) = mpsc::channel(1024);
     let (tx_d2qd, rx_d2qd) = mpsc::channel(1024);
