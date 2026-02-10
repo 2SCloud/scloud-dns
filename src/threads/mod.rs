@@ -1,13 +1,19 @@
 use crate::exceptions::SCloudException;
-use crate::threads::task::ScloudWorkerTask;
-use crate::{log_debug, utils};
 use anyhow::Result;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
+use std::thread::Thread;
+use crate::{log_debug, log_error, utils};
+use tokio::sync::{mpsc, Mutex, Semaphore};
+use std::sync::Arc;
+use futures_util::task::Spawn;
+use crate::threads::task::InFlightTask;
 
 pub(crate) mod task;
 pub(crate) mod tests;
+pub(crate) mod queue;
+pub(crate) mod workers;
 
 #[cfg(windows)]
 mod windows;
@@ -20,8 +26,6 @@ mod macos;
 
 #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 mod others;
-mod queue;
-mod workers;
 
 #[cfg(windows)]
 mod thread {
@@ -64,11 +68,16 @@ mod thread {
 ///
 /// Incoming:
 /// - CPU affinity/processor binding
-pub(crate) struct ScloudWorker {
+pub(crate) struct SCloudWorker {
     // IDENTITY
     pub(crate) worker_id: u64,
     pub(crate) os_thread_id: AtomicU64,
+    pub(crate) os_thread_name: String,
     pub(crate) worker_type: WorkerType,
+
+    // CHANNEL
+    pub(crate) dns_tx: Mutex<Option<mpsc::Sender<InFlightTask>>>,
+    pub(crate) dns_rx: Mutex<Option<mpsc::Receiver<InFlightTask>>>,
 
     // RESOURCES/LIMITS
     pub(crate) stack_size_bytes: AtomicUsize,
@@ -88,8 +97,9 @@ pub(crate) struct ScloudWorker {
     pub(crate) shutdown_mode: AtomicU8,
 
     // BACKPRESSURE/IN-FLIGHT
-    pub(crate) in_flight: AtomicUsize,     // should be 0/1
-    pub(crate) max_in_flight: AtomicUsize, // prefetch/internal pool
+    pub(crate) in_flight: AtomicUsize, // for metrics
+    pub(crate) in_flight_sem: Arc<Semaphore>,
+    pub(crate) max_in_flight: AtomicUsize,
 
     // METRICS
     pub(crate) jobs_done: AtomicU64,
@@ -111,14 +121,27 @@ pub(crate) struct ScloudWorker {
 }
 
 #[allow(unused)]
-impl ScloudWorker {
+impl SCloudWorker {
     const NEVER_APPLIED: u8 = 0xFF;
 
-    pub(crate) fn new(worker_id: u64, worker_type: WorkerType) -> Self {
-        Self {
+    pub(crate) fn new(worker_id: u64, worker_type: WorkerType) -> Result<Self, SCloudException> {
+
+        let thread_name = match worker_type {
+            WorkerType::LISTENER => format!("scloud-dns-listener-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
+            WorkerType::DECODER  => format!("scloud-dns-decoder-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
+            WorkerType::QUERY_DISPATCHER => format!("scloud-dns-qd-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
+            WorkerType::RESOLVER => format!("scloud-dns-resolver-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
+            WorkerType::SENDER => format!("scloud-dns-sender-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
+            _ => return Err(SCloudException::SCLOUD_THREADS_SPAWN_CONFIG_WORKER_TYPE_MISMATCH),
+        };
+
+        Ok(Self {
             worker_id,
             os_thread_id: AtomicU64::new(0),
+            os_thread_name: thread_name,
             worker_type,
+            dns_tx: Mutex::new(None),
+            dns_rx: Mutex::new(None),
             stack_size_bytes: AtomicUsize::new(2 * 1024 * 1024),
             buffer_budget_bytes: AtomicUsize::new(4 * 1024 * 1024),
             max_stack_size_bytes: AtomicUsize::new(32 * 1024 * 1024),
@@ -131,6 +154,7 @@ impl ScloudWorker {
             shutdown_requested: AtomicBool::new(false),
             shutdown_mode: AtomicU8::new(ShutdownMode::GRACEFUL as u8),
             in_flight: AtomicUsize::new(0),
+            in_flight_sem: Arc::new(Semaphore::new(512)),
             max_in_flight: AtomicUsize::new(1),
             jobs_done: AtomicU64::new(0),
             jobs_failed: AtomicU64::new(0),
@@ -142,20 +166,43 @@ impl ScloudWorker {
             last_task_id_hi: AtomicU64::new(0),
             last_task_id_lo: AtomicU64::new(0),
             consumer_tag_hash: AtomicU64::new(0),
-        }
+        })
     }
 
-    pub(crate) async fn run(&self) -> Result<(), SCloudException> {
-        // TODO: check the type of worker and adapt what is doing
-        match self.worker_type {
-            WorkerType::LISTENER => {
+    pub(crate) async fn run(self: Arc<Self>) -> Result<(), SCloudException> {
+        let worker = self.as_ref();
 
+        log_debug!("Running SCloudWorker [ID: {}][TYPE: {:?}]", worker.worker_id, worker.worker_type);
+        match worker.worker_type {
+            WorkerType::LISTENER => {
+                let tx = self.dns_tx.lock().await
+                    .as_ref()
+                    .cloned()
+                    .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET)?;
+
+                workers::listener::run_dns_listener(self.clone(), "0.0.0.0:5353", tx).await?;
             }
             WorkerType::DECODER => {
+                let tx = self.dns_tx.lock().await
+                    .as_ref()
+                    .cloned()
+                    .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET)?;
+                let rx = self.dns_rx.lock().await
+                    .take()
+                    .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET)?;
 
+                workers::decoder::run_dns_decoder(self.clone(), rx, tx).await?;
             }
             WorkerType::QUERY_DISPATCHER => {
+                let tx = self.dns_tx.lock().await
+                    .as_ref()
+                    .cloned()
+                    .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET)?;
+                let rx = self.dns_rx.lock().await
+                    .take()
+                    .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET)?;
 
+                workers::query_dispatcher::run_dns_query_dispatcher(self.clone(), rx, tx).await?;
             }
             WorkerType::CACHE_LOOKUP => {
 
@@ -164,7 +211,15 @@ impl ScloudWorker {
 
             }
             WorkerType::RESOLVER => {
+                let tx = self.dns_tx.lock().await
+                    .as_ref()
+                    .cloned()
+                    .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET)?;
+                let rx = self.dns_rx.lock().await
+                    .take()
+                    .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET)?;
 
+                workers::resolver::run_dns_resolver(self.clone(), rx, tx).await?;
             }
             WorkerType::CACHE_WRITER => {
 
@@ -267,6 +322,11 @@ impl ScloudWorker {
     }
 
     #[inline]
+    pub fn get_in_flight_sem(&self) -> Arc<Semaphore> {
+        self.in_flight_sem.clone()
+    }
+
+    #[inline]
     pub fn get_max_in_flight(&self) -> usize {
         self.max_in_flight.load(Ordering::Relaxed)
     }
@@ -334,6 +394,16 @@ impl ScloudWorker {
     #[inline]
     pub fn set_worker_type(&mut self, worker_type: WorkerType) {
         self.worker_type = worker_type;
+    }
+
+    #[inline]
+    pub async fn set_dns_tx(&self, tx: mpsc::Sender<InFlightTask>) {
+        *self.dns_tx.lock().await = Some(tx);
+    }
+
+    #[inline]
+    pub async fn set_dns_rx(&self, rx: mpsc::Receiver<InFlightTask>) {
+        *self.dns_rx.lock().await = Some(rx);
     }
 
     #[inline]
@@ -613,6 +683,7 @@ impl PriorityScope {
     }
 }
 
+#[derive(Clone)]
 pub struct SpawnConfig<'a> {
     pub name: Option<&'a str>,
     pub stack_size: Option<usize>,
@@ -628,7 +699,7 @@ impl<'a> Default for SpawnConfig<'a> {
 }
 
 #[allow(unused)]
-pub fn new<F, T>(cfg: SpawnConfig<'_>, f: F) -> std::thread::JoinHandle<T>
+pub fn new<F, T>(cfg: SpawnConfig<'_>, f: F) -> Result<std::thread::JoinHandle<T>, SCloudException>
 where
     F: FnOnce() -> T + Send + 'static,
     T: Send + 'static,
@@ -636,8 +707,10 @@ where
     thread::thread_base::new(cfg, f)
 }
 
+// TODO: Impl that to SCloudWorker and modify it (he will take the os_thread_id linked to the worker)
 // TODO: should return an ScloudException
 #[allow(unused)]
 pub fn set_priority(scope: PriorityScope, p: ThreadPriority) -> std::io::Result<()> {
     thread::priority::set_priority(scope, p)
 }
+

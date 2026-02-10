@@ -33,7 +33,11 @@ Clone the project and build with Cargo:
 ```bash
 git clone https://github.com/2SCloud/scloud-dns.git
 cd scloud-dns
-cargo build --release
+cargo run --release --package scloud-dns --bin scloud-dns
+sudo mkdir -p /var/log/scloud-dns
+sudo chown -R $USER:$USER /var/log/scloud-dns
+cd target/release
+./scloud-dns
 ```
 
 The compiled binary will be located in `target/release/scloud-dns`.
@@ -65,6 +69,95 @@ cargo test
 ```
 
 To see test coverage, check https://2scloud.github.io/scloud-dns/coverage.
+
+---
+
+## Observability & Debugging `scloud-dns`
+
+This section lists useful commands to inspect, debug, and analyze the runtime behavior and performance of the `scloud-dns` process.
+
+All commands assume a Linux or WSL2 environment.
+
+**Find the running `scloud-dns` process**
+
+`ps -f -u $USER | grep scloud-dns`
+
+Displays:
+- PID / PPID
+- approximate CPU usage
+- start time
+- controlling terminal
+- command used to launch the binary
+
+Example output:
+```
+UID    PID     PPID   C  STIME  TTY     TIME     CMD
+onhlt  784566  784565 3  14:26  pts/2   00:00:09 target/debug/scloud-dns
+```
+
+---
+
+**Inspect CPU and memory usage**
+
+`ps -p <PID> -o pid,%cpu,%mem,rss,vsz,cmd`
+
+Where:
+- %cpu = CPU usage
+- %mem = memory usage
+- rss  = resident memory (KB)
+- vsz  = virtual memory size
+
+---
+
+**Inspect threads (SCloudWorker & ThreadsOS)**
+
+`ps -T -p <PID>`
+
+Live view per thread:
+`top -H -p <PID>`
+
+Useful to:
+- verify how many Tokio worker threads are running
+- detect blocked or imbalanced threads
+
+---
+
+### 🌐 Inspect UDP sockets
+
+ss -u -n -p | grep <PID>
+
+Shows:
+- UDP sockets bound by scloud-dns
+- local ports and addresses
+- owning process
+
+---
+
+### 📈 Kernel UDP statistics (drops & errors)
+
+cat /proc/net/snmp | tail -n 2
+
+Important fields:
+- InDatagrams
+- InErrors
+- RcvbufErrors
+
+These counters indicate kernel-level UDP drops.
+
+---
+
+### 🔬 Trace network syscalls (live, low risk)
+
+sudo strace -tt -p <PID> -f -e trace=network
+
+Displays:
+- recvfrom() call rate
+- sendto() activity
+- syscall timing
+
+Very useful to confirm:
+- UDP receive throughput
+- whether the process is IO-bound or CPU-bound
 
 ---
 
