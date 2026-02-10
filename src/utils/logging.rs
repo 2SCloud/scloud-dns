@@ -8,6 +8,7 @@ use crate::exceptions::SCloudException;
 use crate::utils::time::{format_system_time, now_epoch_ms};
 use once_cell::sync::OnceCell;
 use tokio::sync::mpsc;
+use serde_json::json;
 
 struct Logger {
     cfg: LoggingConfig,
@@ -23,6 +24,46 @@ pub struct OtelLog {
 
 pub static LOG_SENDER: OnceCell<mpsc::UnboundedSender<OtelLog>> = OnceCell::new();
 static LOGGER: OnceLock<Mutex<Logger>> = OnceLock::new();
+
+pub fn build_otlp_payload(logs: &[OtelLog]) -> serde_json::Value {
+    json!({
+        "resourceLogs": [{
+            "resource": {
+                "attributes": [
+                    {
+                        "key": "service.name",
+                        "value": { "stringValue": "scloud-dns" }
+                    },
+                    {
+                        "key": "service.instance.id",
+                        "value": { "stringValue": "scloud-dns-01" }
+                    }
+                ]
+            },
+            "scopeLogs": [{
+                "scope": {
+                    "name": "scloud.logger",
+                    "version": "1.0.0"
+                },
+                "logRecords": logs.iter().map(|log| {
+                    json!({
+                        "timeUnixNano": log.timestamp,
+                        "severityText": log.severity,
+                        "body": {
+                            "stringValue": log.message
+                        },
+                        "attributes": [
+                            {
+                                "key": "target",
+                                "value": { "stringValue": log.target }
+                            }
+                        ]
+                    })
+                }).collect::<Vec<_>>()
+            }]
+        }]
+    })
+}
 
 /// Initialize global logger.</br>
 /// Call once at startup.

@@ -13,9 +13,6 @@ pub async fn run_dns_query_dispatcher(
 ) -> Result<(), SCloudException> {
     loop {
         while let Some(mut msg) = rx.recv().await {
-            log_debug!("decoder got {} bytes from {}", msg.task.payload.len(), msg.task.for_who);
-            log_trace!("bytes: {:?}", msg.task.payload.chunk());
-
             if tx.send(msg).await.is_err() {
                 return Ok(());
             }

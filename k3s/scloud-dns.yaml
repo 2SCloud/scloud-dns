@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rust-dns
+  namespace: scloud-dns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rust-dns
+  template:
+    metadata:
+      labels:
+        app: rust-dns
+    spec:
+      containers:
+        - name: rust-dns
+          image: ghcr.io/2SCloud/scloud-dns:0.2.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: dns-udp
+              containerPort: 53
+              protocol: UDP
+            - name: dns-tcp
+              containerPort: 53
+              protocol: TCP
+          env:
+            - name: OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+              value: "http://alloy.scloud-observability.svc:14318/v1/logs"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_SERVICE_NAME
+              value: "rust-dns"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "k8s.namespace.name=scloud-dns"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rust-dns
+  namespace: scloud-dns
+spec:
+  selector:
+    app: rust-dns
+  ports:
+    - name: dns-udp
+      port: 53
+      targetPort: 53
+      protocol: UDP
+    - name: dns-tcp
+      port: 53
+      targetPort: 53
+      protocol: TCP
+  type: ClusterIP
