@@ -13,17 +13,23 @@ spec:
       labels:
         app: rust-dns
     spec:
+      volumes:
+        - name: logs
+          emptyDir: {}
       containers:
         - name: rust-dns
-          image: ghcr.io/2SCloud/scloud-dns:0.2.1
-          imagePullPolicy: IfNotPresent
+          image: ghcr.io/2scloud/scloud-dns:0.2.1
+          imagePullPolicy: Always
           ports:
             - name: dns-udp
-              containerPort: 53
+              containerPort: 5353
               protocol: UDP
             - name: dns-tcp
-              containerPort: 53
+              containerPort: 5353
               protocol: TCP
+          volumeMounts:
+            - name: logs
+              mountPath: /var/log/scloud-dns
           env:
             - name: OTEL_SERVICE_NAME
               value: "scloud-dns"
@@ -39,7 +45,6 @@ spec:
               value: "none"
             - name: OTEL_METRICS_EXPORTER
               value: "none"
-
 ---
 apiVersion: v1
 kind: Service
@@ -52,10 +57,10 @@ spec:
   ports:
     - name: dns-udp
       port: 53
-      targetPort: 53
+      targetPort: 5353
       protocol: UDP
     - name: dns-tcp
       port: 53
-      targetPort: 53
+      targetPort: 5353
       protocol: TCP
   type: ClusterIP
