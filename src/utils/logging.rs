@@ -1,25 +1,28 @@
 use crate::config::{LogFormat, LogLevel, LoggingConfig};
-use std::fs::{self, File, OpenOptions};
+use crate::exceptions::SCloudException;
+use crate::utils::time::{format_system_time, now_epoch_ms};
+
+use once_cell::sync::OnceCell;
+use serde_json::json;
+
+use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::SystemTime;
-use crate::exceptions::SCloudException;
-use crate::utils::time::{format_system_time, now_epoch_ms};
-use once_cell::sync::OnceCell;
+
 use tokio::sync::mpsc;
-use serde_json::json;
 
 struct Logger {
     cfg: LoggingConfig,
-    file: File,
+    file: std::fs::File,
 }
 
 pub struct OtelLog {
     pub target: String,
     pub severity: &'static str,
     pub message: String,
-    pub timestamp: String,
+    pub timestamp_unix_nano: String,
 }
 
 pub static LOG_SENDER: OnceCell<mpsc::Sender<OtelLog>> = OnceCell::new();
@@ -30,33 +33,19 @@ pub fn build_otlp_payload(logs: &[OtelLog]) -> serde_json::Value {
         "resourceLogs": [{
             "resource": {
                 "attributes": [
-                    {
-                        "key": "service.name",
-                        "value": { "stringValue": "scloud-dns" }
-                    },
-                    {
-                        "key": "service.instance.id",
-                        "value": { "stringValue": "scloud-dns-01" }
-                    }
+                    { "key": "service.name",        "value": { "stringValue": "scloud-dns" } },
+                    { "key": "service.instance.id", "value": { "stringValue": "scloud-dns-01" } }
                 ]
             },
             "scopeLogs": [{
-                "scope": {
-                    "name": "scloud.logger",
-                    "version": "1.0.0"
-                },
+                "scope": { "name": "scloud.logger", "version": "1.0.0" },
                 "logRecords": logs.iter().map(|log| {
                     json!({
-                        "timeUnixNano": log.timestamp,
+                        "timeUnixNano": log.timestamp_unix_nano,
                         "severityText": log.severity,
-                        "body": {
-                            "stringValue": log.message
-                        },
+                        "body": { "stringValue": log.message },
                         "attributes": [
-                            {
-                                "key": "target",
-                                "value": { "stringValue": log.target }
-                            }
+                            { "key": "target", "value": { "stringValue": log.target } }
                         ]
                     })
                 }).collect::<Vec<_>>()
@@ -65,13 +54,13 @@ pub fn build_otlp_payload(logs: &[OtelLog]) -> serde_json::Value {
     })
 }
 
-/// Initialize global logger.</br>
+/// Initialize global logger.
 /// Call once at startup.
 pub fn init(cfg: LoggingConfig) -> Result<(), SCloudException> {
     let path = Path::new(&cfg.file);
 
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|e|  {
+        fs::create_dir_all(parent).map_err(|e| {
             eprintln!("failed to create log dir {:?}: {}", parent, e);
             SCloudException::SCLOUD_LOGGING_PATH_CREATION_FAILED
         })?;
@@ -80,15 +69,15 @@ pub fn init(cfg: LoggingConfig) -> Result<(), SCloudException> {
     let file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(path).map_err(|_| SCloudException::SCLOUD_LOGGING_FILE_CREATION_OR_OPENING_FAILED)?;
+        .open(path)
+        .map_err(|_| SCloudException::SCLOUD_LOGGING_FILE_CREATION_OR_OPENING_FAILED)?;
 
     let logger = Logger { cfg, file };
     let _ = LOGGER.set(Mutex::new(logger));
     Ok(())
 }
 
-
-/// Write one log line (internal).</br>
+/// Write one log line (internal).
 /// Safe to call from any thread.
 pub fn log(level: LogLevel, target: &str, msg: &str) {
     let Some(lock) = LOGGER.get() else {
@@ -101,11 +90,18 @@ pub fn log(level: LogLevel, target: &str, msg: &str) {
     };
 
     if level < g.cfg.level {
-        if g.cfg.live_print == true {
-            let now = SystemTime::now();
-            println!("[{}][{:?}][{}] - {}", format_system_time(now), level, target, msg);
-        }
         return;
+    }
+
+    if g.cfg.live_print {
+        let now = SystemTime::now();
+        println!(
+            "[{}][{:?}][{}] - {}",
+            format_system_time(now),
+            level,
+            target,
+            msg
+        );
     }
 
     if g.cfg.rotate {
@@ -136,14 +132,9 @@ fn rotate_file(logger: &mut Logger) -> io::Result<()> {
     let rotated = rotated_name(path, epoch_ms);
 
     let _ = logger.file.flush();
-
     let _ = fs::rename(path, &rotated);
 
-    logger.file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)?;
-
+    logger.file = OpenOptions::new().create(true).append(true).open(path)?;
     Ok(())
 }
 
@@ -155,7 +146,13 @@ fn rotated_name(path: &Path, epoch_ms: u128) -> PathBuf {
 }
 
 fn format_text_line(level: LogLevel, target: &str, msg: &str) -> String {
-    format!("[{}][{}][{}] {}", format_system_time(SystemTime::now()), level.as_str(), target, msg)
+    format!(
+        "[{}][{}][{}] {}",
+        format_system_time(SystemTime::now()),
+        level.as_str(),
+        target,
+        msg
+    )
 }
 
 fn format_json_line(level: LogLevel, target: &str, msg: &str) -> String {
@@ -195,11 +192,11 @@ macro_rules! __log_internal {
         let target = concat!(module_path!(), ":", line!());
 
         if let Some(sender) = $crate::utils::logging::LOG_SENDER.get() {
-            let _ = sender.send($crate::utils::logging::OtelLog {
+            let _ = sender.try_send($crate::utils::logging::OtelLog {
                 target: target.to_string(),
                 severity: $otel_lvl,
                 message: format!($($arg)*),
-                timestamp: $crate::utils::time::now_unix_nano(),
+                timestamp_unix_nano: $crate::utils::time::now_unix_nano(),
             });
         }
 
@@ -252,4 +249,3 @@ macro_rules! log_fatal {
         $crate::__log_internal!($crate::config::LogLevel::FATAL, "FATAL", $($arg)*);
     };
 }
-

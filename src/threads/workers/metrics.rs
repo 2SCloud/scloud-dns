@@ -1,7 +1,7 @@
 use tokio::sync::mpsc;
 use tokio::time::{Duration, Instant};
-use crate::utils::logging::{LOG_SENDER, OtelLog};
-use crate::utils::logging::build_otlp_payload;
+
+use crate::utils::logging::{build_otlp_payload, OtelLog, LOG_SENDER};
 
 pub async fn start_otlp_logger() {
     let (tx, mut rx) = mpsc::channel::<OtelLog>(10_000);
@@ -55,5 +55,4 @@ async fn flush(client: &reqwest::Client, url: &str, buf: &mut Vec<OtelLog>) {
     }
 
     buf.clear();
-
 }
