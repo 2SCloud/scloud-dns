@@ -1,35 +1,47 @@
 use tokio::sync::mpsc;
 use tokio::time::{Duration, Instant};
-
 use crate::utils::logging::{build_otlp_payload, OtelLog, LOG_SENDER};
 
+const CHAN_SIZE: usize = 200_000;
+const MAX_BATCH: usize = 15_000;
+const FLUSH_EVERY: Duration = Duration::from_secs(10);
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
+
 pub async fn start_otlp_logger() {
-    let (tx, mut rx) = mpsc::channel::<OtelLog>(10_000);
+    let (tx, mut rx) = mpsc::channel::<OtelLog>(CHAN_SIZE);
 
     if LOG_SENDER.set(tx).is_err() {
         eprintln!("OTLP logger already started (LOG_SENDER already set)");
         return;
     }
 
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(REQUEST_TIMEOUT)
+        .build()
+        .expect("reqwest client");
+
     let url = "http://alloy.scloud-observability.svc:4318/v1/logs";
 
-    let mut buf: Vec<OtelLog> = Vec::with_capacity(512);
+    let mut buf: Vec<OtelLog> = Vec::with_capacity(MAX_BATCH.min(50_000));
+    let mut ticker = tokio::time::interval(FLUSH_EVERY);
+    ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+
     let mut last_flush = Instant::now();
 
     loop {
         tokio::select! {
             Some(log) = rx.recv() => {
                 buf.push(log);
-                if buf.len() >= 512 {
-                    flush(&client, url, &mut buf).await;
+
+                if buf.len() >= MAX_BATCH {
+                    flush_with_retry(&client, url, &mut buf).await;
                     last_flush = Instant::now();
                 }
             }
 
-            _ = tokio::time::sleep(Duration::from_millis(200)) => {
-                if !buf.is_empty() && last_flush.elapsed() >= Duration::from_millis(200) {
-                    flush(&client, url, &mut buf).await;
+            _ = ticker.tick() => {
+                if !buf.is_empty() && last_flush.elapsed() >= FLUSH_EVERY {
+                    flush_with_retry(&client, url, &mut buf).await;
                     last_flush = Instant::now();
                 }
             }
@@ -37,22 +49,66 @@ pub async fn start_otlp_logger() {
     }
 }
 
-async fn flush(client: &reqwest::Client, url: &str, buf: &mut Vec<OtelLog>) {
-    let payload = build_otlp_payload(buf.as_ref());
+async fn flush_with_retry(client: &reqwest::Client, url: &str, buf: &mut Vec<OtelLog>) {
+    let payload = build_otlp_payload(buf.as_slice());
 
-    let res = client.post(url).json(&payload).send().await;
+    let mut backoff = Duration::from_millis(200);
+    let max_backoff = Duration::from_secs(5);
+    let mut attempts = 0u32;
 
-    match res {
-        Ok(r) if !r.status().is_success() => {
-            let status = r.status();
-            let body = r.text().await.unwrap_or_default();
-            eprintln!("OTLP flush failed HTTP {status} ({} logs). Body: {body}", buf.len());
-        }
-        Ok(_) => {}
-        Err(e) => {
-            eprintln!("OTLP flush failed ({} logs): {e}", buf.len());
+    loop {
+        attempts += 1;
+
+        let res = client.post(url).json(&payload).send().await;
+
+        match res {
+            Ok(r) if r.status().is_success() => {
+                buf.clear();
+                return;
+            }
+
+            Ok(r) => {
+                let status = r.status();
+                let body = r.text().await.unwrap_or_default();
+
+                if status.as_u16() == 429 || status.is_server_error() {
+                    eprintln!("OTLP flush got HTTP {status} ({} logs). retrying in {:?}. Body: {}",
+                              buf.len(), backoff, truncate(&body, 200));
+
+                    if attempts >= 6 {
+                        eprintln!("OTLP flush giving up after {attempts} attempts, dropping {} logs", buf.len());
+                        buf.clear();
+                        return;
+                    }
+
+                    tokio::time::sleep(backoff).await;
+                    backoff = (backoff * 2).min(max_backoff);
+                    continue;
+                }
+
+                eprintln!("OTLP flush failed HTTP {status} ({} logs). Body: {}",
+                          buf.len(), truncate(&body, 200));
+                buf.clear();
+                return;
+            }
+
+            Err(e) => {
+                eprintln!("OTLP flush error ({} logs): {e}. retrying in {:?}", buf.len(), backoff);
+
+                if attempts >= 6 {
+                    eprintln!("OTLP flush giving up after {attempts} attempts, dropping {} logs", buf.len());
+                    buf.clear();
+                    return;
+                }
+
+                tokio::time::sleep(backoff).await;
+                backoff = (backoff * 2).min(max_backoff);
+            }
         }
     }
+}
 
-    buf.clear();
+fn truncate(s: &str, max: usize) -> String {
+    if s.len() <= max { return s.to_string(); }
+    format!("{}…", &s[..max])
 }
