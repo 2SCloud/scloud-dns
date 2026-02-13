@@ -18,13 +18,77 @@
 
 `scloud-dns` is a Rust application for managing and querying DNS servers. It allows you to build and send DNS queries, analyze responses, and view DNS records conveniently.
 
+---
+
+## What is 2SCloud DNS?
+
+2SCloud DNS is a modern DNS server written entirely in Rust.
+
+It is designed to be:
+
+- Fast
+- Concurrent
+- Memory-safe
+- Cloud-native
+- Architected around a modular worker system
+
+Unlike traditional DNS utilities, 2SCloud DNS is a real DNS server engine built from the ground up with a focus on performance, scalability and clean architecture.
+
+It runs:
+
+- On Linux
+- Inside Docker
+- In Kubernetes clusters
+- In cloud-native environments
+  
+---
+
+## For Non-Technical Readers
+
+When you open a website like:
+
+    github.com
+
+Your device asks a DNS server:
+
+    “What is the IP address of github.com?”
+
+2SCloud DNS is a program that answers that question.
+
+Its goal is to:
+
+- Handle many requests at the same time
+- Respond quickly
+- Remain stable under heavy load
+- Be ready for modern cloud infrastructure
+
+It is not just a simple command-line DNS tool.
+It is a fully designed DNS server architecture.
+
+---
+
 ## Features
 
-- Send DNS queries (A, AAAA, CNAME, MX, TXT…)
-- Analyze DNS responses
-- Handle domain names and DNS classes/types
-- Detailed result display
-- Unit tests to ensure reliability
+- Fully asynchronous architecture (Tokio)
+- Multi-worker pipeline
+- Semaphore-based backpressure
+- Zero shared mutable state between workers
+- Linux runtime introspection support
+- UDP support (TCP supported via architecture)
+- Designed for Kubernetes
+- Distroless container ready
+- Structured logging
+- Built for high throughput DNS workloads
+
+Planned:
+
+- DNS zone management
+- Recursive resolution
+- Intelligent caching with TTL
+- DNSSEC support
+- Metrics endpoint
+
+---
 
 ## Installation
 
@@ -44,19 +108,61 @@ The compiled binary will be located in `target/release/scloud-dns`.
 
 ---
 
-## Usage
+## Architecture Overview (Technical)
 
-Example to run the application and query a DNS server:
+2SCloud DNS uses an in-process actor-style runtime built with:
 
-```bash
-./target/release/scloud-dns --server 8.8.8.8 --query example.com A
-```
+- Rust
+- Tokio
+- OS threads (one per worker)
+- Message passing (tokio::mpsc)
+- Semaphore-based backpressure
+- Atomic state tracking
 
-Main options:
+There is no external message broker in the hot path.
 
-- `--server <IP>`:        Target DNS server
-- `--query <DOMAIN>`: Domain name to query
-- `--type <TYPE>`:         DNS record type (A, AAAA, CNAME, MX, TXT…)
+Each component of the DNS pipeline runs in a dedicated worker:
+
+| Worker              | Responsibility                         |
+|---------------------|----------------------------------------|
+| [LISTENER](https://github.com/2SCloud/scloud-dns/blob/ae8efac70824dd1229c21b911afd4b450d77e2d8/src/threads/mod.rs#L563)                      | Receives incoming UDP DNS packets                  |
+| [DECODER](https://github.com/2SCloud/scloud-dns/blob/ae8efac70824dd1229c21b911afd4b450d77e2d8/src/threads/mod.rs#L564)                       | Parses raw DNS packets into structured objects     |
+| [QUERY_DISPATCHER](https://github.com/2SCloud/scloud-dns/blob/ae8efac70824dd1229c21b911afd4b450d77e2d8/src/threads/mod.rs#L565)              | Determines how queries should be processed         |
+| [CACHE_LOOKUP](https://github.com/2SCloud/scloud-dns/blob/ae8efac70824dd1229c21b911afd4b450d77e2d8/src/threads/mod.rs#L566)                  | Checks in-memory cache before resolution           |
+| [ZONE_MANAGER](https://github.com/2SCloud/scloud-dns/blob/ae8efac70824dd1229c21b911afd4b450d77e2d8/src/threads/mod.rs#L567)                  | Manages authoritative DNS zones and records        |
+| [RESOLVER](https://github.com/2SCloud/scloud-dns/blob/ae8efac70824dd1229c21b911afd4b450d77e2d8/src/threads/mod.rs#L568)                      | Performs recursive or authoritative resolution     |
+| [CACHE_WRITER](https://github.com/2SCloud/scloud-dns/blob/ae8efac70824dd1229c21b911afd4b450d77e2d8/src/threads/mod.rs#L569)                  | Updates cache entries after resolution             |
+| [ENCODER](https://github.com/2SCloud/scloud-dns/blob/ae8efac70824dd1229c21b911afd4b450d77e2d8/src/threads/mod.rs#L570)                       | Builds DNS response packets                        |
+| [SENDER](https://github.com/2SCloud/scloud-dns/blob/ae8efac70824dd1229c21b911afd4b450d77e2d8/src/threads/mod.rs#L571)                        | Sends DNS responses back to clients                |
+| [CACHE_JANITOR](https://github.com/2SCloud/scloud-dns/blob/ae8efac70824dd1229c21b911afd4b450d77e2d8/src/threads/mod.rs#L573)                 | Cleans expired cache entries and manages TTL logic |
+| [METRICS](https://github.com/2SCloud/scloud-dns/blob/ae8efac70824dd1229c21b911afd4b450d77e2d8/src/threads/mod.rs#L575)                       | Collects and aggregates runtime metrics            |
+| [TCP_ACCEPTOR](https://github.com/2SCloud/scloud-dns/blob/ae8efac70824dd1229c21b911afd4b450d77e2d8/src/threads/mod.rs#L576)                  | Accepts and manages incoming TCP DNS connections   |
+
+Each worker:
+
+- Runs in its own OS thread
+- Communicates through in-memory channels
+- Has concurrency limits enforced by a Semaphore
+
+---
+
+## Concurrency Model
+
+Instead of using distributed brokers (RabbitMQ / Pulsar), 2SCloud DNS relies on:
+
+- In-process message passing
+- Lock-free atomic counters
+- Controlled in-flight limits
+- Async task orchestration
+
+Example:
+
+- `in_flight` tracks active request processing
+- `Semaphore` enforces max concurrency (e.g., 512 simultaneous packets)
+- No disk writes on hot path
+- No external network hop
+
+This allows microsecond-level packet handling and high request-per-second throughput.
 
 ---
 
@@ -122,42 +228,95 @@ Useful to:
 
 ---
 
-### 🌐 Inspect UDP sockets
+## Docker
+
+docker build -t scloud-dns .
+docker run --rm -p 53:53/udp -p 53:53/tcp scloud-dns
+
+Test:
+
+dig @127.0.0.1 -p 53 github.com
+
+---
+
+## Kubernetes
+
+kubectl apply -f k8s/scloud-dns.yaml
+kubectl get pods -n scloud-dns
+
+Stress test inside cluster:
+
+dnsperf -s rust-dns -p 53 -Q 1000 -l 30
+
+---
+
+## Performance Testing
+
+Basic query:
+
+dig @127.0.0.1 -p 53 example.com
+
+High throughput:
+
+dnsperf -s <SERVICE> -p 53 -Q 1000 -l 30
+
+---
+
+## Runtime Inspection (Linux)
+
+Check threads:
+
+ps -T -p <PID>
+top -H -p <PID>
+
+Check UDP sockets:
 
 ss -u -n -p | grep <PID>
 
-Shows:
-- UDP sockets bound by scloud-dns
-- local ports and addresses
-- owning process
-
----
-
-### 📈 Kernel UDP statistics (drops & errors)
+Kernel UDP stats:
 
 cat /proc/net/snmp | tail -n 2
 
-Important fields:
-- InDatagrams
-- InErrors
-- RcvbufErrors
-
-These counters indicate kernel-level UDP drops.
-
----
-
-### 🔬 Trace network syscalls (live, low risk)
+Trace syscalls:
 
 sudo strace -tt -p <PID> -f -e trace=network
 
-Displays:
-- recvfrom() call rate
-- sendto() activity
-- syscall timing
+These tools help diagnose:
 
-Very useful to confirm:
-- UDP receive throughput
-- whether the process is IO-bound or CPU-bound
+- Packet drops
+- Kernel buffer saturation
+- CPU bottlenecks
+- Thread imbalance
+
+---
+
+## Testing
+
+cargo test
+
+Coverage:
+[https://2scloud.github.io/scloud-dns/](https://2scloud.github.io/scloud-dns/)
+
+---
+
+## Why No Message Broker?
+
+`2scloud-dns` intentionally avoids external brokers (RabbitMQ, Pulsar) in the DNS request path.
+
+Reasons:
+
+- DNS requires extremely low latency
+- External brokers add disk and network overhead
+- In-process concurrency control is sufficient
+- Designed for high PPS workloads
+
+External systems may later handle:
+
+- Logging
+- Metrics streaming
+- Distributed coordination
+
+But never the hot request path.
 
 ---
 
@@ -167,7 +326,7 @@ Contributions are welcome!
 
 1. Fork the project
 2. Create your branch: `git checkout -b feature/issue-XXXX` or `fix/issue-XXXX`
-3. Commit your changes: `git commit -m "Add …"`
+3. Commit your changes: `git commit -m "feat(scope-here): your message here"` or `git commit -m "fix(scope-here): your message here"`...
 4. Push your branch: `git push origin feature/issue-XXXX` or `fix/issue-XXXX`
 5. Open a Pull Request
 
@@ -175,8 +334,9 @@ Contributions are welcome!
 
 ## Licence
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT (Non-Commercial) License. See the [LICENSE](LICENSE) file for details.
 
 ---
 
 > This project is part of the **2SCloud** organization.
+> 2scloud-dns is part of the broader 2SCloud ecosystem focused on building modern, cloud-native infrastructure components.
