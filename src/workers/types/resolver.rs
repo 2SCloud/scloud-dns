@@ -3,8 +3,8 @@ use bytes::Buf;
 use tokio::sync::mpsc;
 use crate::{log_debug, log_trace};
 use crate::exceptions::SCloudException;
-use crate::threads::SCloudWorker;
-use crate::threads::task::InFlightTask;
+use crate::workers::SCloudWorker;
+use crate::workers::task::InFlightTask;
 
 pub async fn run_dns_resolver(
     worker: Arc<SCloudWorker>,
