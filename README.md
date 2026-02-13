@@ -227,23 +227,31 @@ Useful to:
 
 ## Docker
 
+```bash
 docker build -t scloud-dns .
 docker run --rm -p 53:53/udp -p 53:53/tcp scloud-dns
+```
 
 Test:
 
+```bash
 dig @127.0.0.1 -p 53 github.com
+```
 
 ---
 
 ## Kubernetes
 
+```bash
 kubectl apply -f k8s/scloud-dns.yaml
 kubectl get pods -n scloud-dns
+```
 
 Stress test inside cluster:
 
+```bash
 dnsperf -s rust-dns -p 53 -Q 1000 -l 30
+```
 
 ---
 
@@ -251,11 +259,15 @@ dnsperf -s rust-dns -p 53 -Q 1000 -l 30
 
 Basic query:
 
+```bash
 dig @127.0.0.1 -p 53 example.com
+```
 
 High throughput:
 
+```bash
 dnsperf -s <SERVICE> -p 53 -Q 1000 -l 30
+```
 
 ---
 
@@ -263,20 +275,28 @@ dnsperf -s <SERVICE> -p 53 -Q 1000 -l 30
 
 Check threads:
 
+```bash
 ps -T -p <PID>
 top -H -p <PID>
+```
 
 Check UDP sockets:
 
+```bash
 ss -u -n -p | grep <PID>
+```
 
 Kernel UDP stats:
 
+```bash
 cat /proc/net/snmp | tail -n 2
+```
 
 Trace syscalls:
 
+```bash
 sudo strace -tt -p <PID> -f -e trace=network
+```
 
 These tools help diagnose:
 
