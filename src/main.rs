@@ -16,7 +16,7 @@ async fn main() -> Result<(), SCloudException> {
     let config = Config::from_file(Path::new("./config/config.json"))?;
     utils::logging::init(config.logging.clone())?;
 
-    // TODO: use this until we organize the starting order of Workers
+    // TODO: use this until we organize the starting order of workers
     tokio::spawn(workers::types::metrics::start_otlp_logger());
 
     let (tx_l2d, rx_l2d) = mpsc::channel(1024);

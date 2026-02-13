@@ -3,4 +3,10 @@ pub(crate) mod decoder;
 pub(crate) mod query_dispatcher;
 pub(crate) mod resolver;
 pub(crate) mod metrics;
-
+pub(crate) mod cache_lookup;
+pub(crate) mod cache_writer;
+pub(crate) mod encoder;
+pub(crate) mod zone_manager;
+pub(crate) mod sender;
+pub(crate) mod cache_janitor;
+pub(crate) mod tcp_acceptor;

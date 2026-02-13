@@ -12,7 +12,6 @@ pub(crate) mod tests;
 pub(crate) mod queue;
 pub(crate) mod types;
 
-#[allow(unused)]
 #[allow(non_camel_case_types)]
 #[derive(Debug)]
 pub(crate) struct SCloudWorker {
@@ -93,71 +92,63 @@ impl SCloudWorker {
         log_sdebug!("Running SCloudWorker [ID: {}][TYPE: {:?}]", self.worker_id, self.worker_type);
         match self.worker_type {
             WorkerType::LISTENER => {
-                let tx = self.dns_tx.lock().await
-                    .as_ref()
-                    .cloned()
-                    .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET)?;
-
                 self.clone().set_state(WorkerState::IDLE as u8);
-
+                let tx = self.get_dns_tx().await?;
                 types::listener::run_dns_listener(self, "0.0.0.0:5353", tx).await?;
             }
             WorkerType::DECODER => {
-                let tx = self.dns_tx.lock().await
-                    .as_ref()
-                    .cloned()
-                    .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET)?;
-                let rx = self.dns_rx.lock().await
-                    .take()
-                    .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET)?;
-
+                self.clone().set_state(WorkerState::IDLE as u8);
+                let (rx, tx) = self.get_dns_rx_tx().await?;
                 types::decoder::run_dns_decoder(self.clone(), rx, tx).await?;
             }
             WorkerType::QUERY_DISPATCHER => {
-                let tx = self.dns_tx.lock().await
-                    .as_ref()
-                    .cloned()
-                    .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET)?;
-                let rx = self.dns_rx.lock().await
-                    .take()
-                    .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET)?;
-
+                self.clone().set_state(WorkerState::IDLE as u8);
+                let (rx, tx) = self.get_dns_rx_tx().await?;
                 types::query_dispatcher::run_dns_query_dispatcher(self.clone(), rx, tx).await?;
             }
             WorkerType::CACHE_LOOKUP => {
-
+                self.clone().set_state(WorkerState::IDLE as u8);
+                let (rx, tx) = self.get_dns_rx_tx().await?;
+                types::cache_lookup::run_dns_cache_lookup(self.clone(), rx, tx).await?;
             }
             WorkerType::ZONE_MANAGER => {
-
+                self.clone().set_state(WorkerState::IDLE as u8);
+                let (rx, tx) = self.get_dns_rx_tx().await?;
+                types::zone_manager::run_dns_zone_manager(self.clone(), rx, tx).await?;
             }
             WorkerType::RESOLVER => {
-                let tx = self.dns_tx.lock().await
-                    .as_ref()
-                    .cloned()
-                    .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET)?;
-                let rx = self.dns_rx.lock().await
-                    .take()
-                    .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET)?;
-
+                self.clone().set_state(WorkerState::IDLE as u8);
+                let (rx, tx) = self.get_dns_rx_tx().await?;
                 types::resolver::run_dns_resolver(self.clone(), rx, tx).await?;
             }
             WorkerType::CACHE_WRITER => {
-
+                self.clone().set_state(WorkerState::IDLE as u8);
+                let (rx, tx) = self.get_dns_rx_tx().await?;
+                types::cache_writer::run_dns_cache_writer(self.clone(), rx, tx).await?;
             }
             WorkerType::ENCODER => {
-
+                self.clone().set_state(WorkerState::IDLE as u8);
+                let (rx, tx) = self.get_dns_rx_tx().await?;
+                types::encoder::run_dns_encoder(self.clone(), rx, tx).await?;
             }
             WorkerType::SENDER => {
-
+                self.clone().set_state(WorkerState::IDLE as u8);
+                let (rx, tx) = self.get_dns_rx_tx().await?;
+                types::sender::run_dns_sender(self.clone(), rx, tx).await?;
             }
             WorkerType::CACHE_JANITOR => {
-
+                self.clone().set_state(WorkerState::IDLE as u8);
+                let rx = self.get_dns_rx().await?;
+                types::cache_janitor::run_dns_cache_janitor(self.clone(), rx).await?;
             }
             WorkerType::METRICS => {
+                self.clone().set_state(WorkerState::IDLE as u8);
                 types::metrics::start_otlp_logger().await;
             }
             WorkerType::TCP_ACCEPTOR => {
-
+                self.clone().set_state(WorkerState::IDLE as u8);
+                let (rx, tx) = self.get_dns_rx_tx().await?;
+                types::tcp_acceptor::run_dns_tcp_acceptor(self.clone(), rx, tx).await?;
             }
             _ => {
 
@@ -174,6 +165,50 @@ impl SCloudWorker {
     #[inline]
     pub fn get_worker_type(&self) -> WorkerType {
         self.worker_type
+    }
+
+    #[inline]
+    pub async fn get_dns_rx_tx(&self) -> (
+        Result<
+            (mpsc::Receiver<InFlightTask>,
+            mpsc::Sender<InFlightTask>),
+            SCloudException
+        >
+    ) {
+        let rx = self.dns_rx
+            .lock()
+            .await
+            .take()
+            .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET);
+
+        let tx = self.dns_tx
+            .lock()
+            .await
+            .as_ref()
+            .cloned()
+            .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET);
+
+
+        Ok((rx?, tx?))
+    }
+
+    #[inline]
+    pub async fn get_dns_rx(&self) -> Result<mpsc::Receiver<InFlightTask>, SCloudException> {
+        self.dns_rx
+            .lock()
+            .await
+            .take()
+            .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET)
+    }
+
+    #[inline]
+    pub async fn get_dns_tx(&self) -> Result<mpsc::Sender<InFlightTask>, SCloudException> {
+        self.dns_tx
+            .lock()
+            .await
+            .as_ref()
+            .cloned()
+            .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET)
     }
 
     #[inline]
@@ -437,17 +472,18 @@ pub fn spawn_worker(
     worker: Arc<SCloudWorker>,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
-        log_info!(
-            "Worker {} ({:?}) started",
-            worker.worker_id,
-            worker.worker_type
-        );
 
         if let Err(e) = worker.clone().run().await {
             log_error!(
                 "Worker {} failed: {:?}",
                 worker.worker_id,
                 e
+            );
+        } else {
+            log_info!(
+                "Worker {} ({:?}) started",
+                worker.worker_id,
+                worker.worker_type
             );
         }
     })
