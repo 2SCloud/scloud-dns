@@ -71,7 +71,7 @@ impl SCloudWorker {
             buffer_budget_bytes: AtomicUsize::new(4 * 1024 * 1024),
             max_stack_size_bytes: AtomicUsize::new(32 * 1024 * 1024),
             max_buffer_budget_bytes: AtomicUsize::new(256 * 1024 * 1024),
-            state: AtomicU8::new(WorkerState::IDLE as u8),
+            state: AtomicU8::new(WorkerState::INIT as u8),
             shutdown_requested: AtomicBool::new(false),
             shutdown_mode: AtomicU8::new(ShutdownMode::GRACEFUL as u8),
             in_flight: AtomicUsize::new(0),
@@ -90,19 +90,17 @@ impl SCloudWorker {
     }
 
     pub(crate) async fn run(self: Arc<Self>) -> Result<(), SCloudException> {
-        let worker = self.as_ref();
-
-        log_sdebug!("Running SCloudWorker [ID: {}][TYPE: {:?}]", worker.worker_id, worker.worker_type);
-        // TODO: finish this trace datails
-        log_strace!("SCloudWorker [ID: {}][TYPE: {:?}]", worker.worker_id, worker.worker_type);
-        match worker.worker_type {
+        log_sdebug!("Running SCloudWorker [ID: {}][TYPE: {:?}]", self.worker_id, self.worker_type);
+        match self.worker_type {
             WorkerType::LISTENER => {
                 let tx = self.dns_tx.lock().await
                     .as_ref()
                     .cloned()
                     .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET)?;
 
-                types::listener::run_dns_listener(self.clone(), "0.0.0.0:5353", tx).await?;
+                self.clone().set_state(WorkerState::IDLE as u8);
+
+                types::listener::run_dns_listener(self, "0.0.0.0:5353", tx).await?;
             }
             WorkerType::DECODER => {
                 let tx = self.dns_tx.lock().await
@@ -318,7 +316,7 @@ impl SCloudWorker {
     }
 
     #[inline]
-    pub fn set_state(&mut self, state: u8) {
+    pub fn set_state(&self, state: u8) {
         self.state.store(state, Ordering::Relaxed);
     }
 

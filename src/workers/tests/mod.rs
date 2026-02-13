@@ -18,7 +18,7 @@ mod tests {
         assert_eq!(worker.max_stack_size_bytes.load(Ordering::Relaxed), 32 * 1024 * 1024);
         assert_eq!(worker.max_buffer_budget_bytes.load(Ordering::Relaxed), 256 * 1024 * 1024);
 
-        assert_eq!(worker.state.load(Ordering::Relaxed), WorkerState::IDLE as u8);
+        assert_eq!(worker.state.load(Ordering::Relaxed), WorkerState::INIT as u8);
         assert_eq!(worker.shutdown_requested.load(Ordering::Relaxed), false);
         assert_eq!(worker.shutdown_mode.load(Ordering::Relaxed), ShutdownMode::GRACEFUL as u8);
 
