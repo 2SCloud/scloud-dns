@@ -36,7 +36,7 @@ Unlike traditional DNS utilities, 2SCloud DNS is a real DNS server engine built 
 
 It runs:
 
-- On Linux
+- On Linux/MacOS/Windows
 - Inside Docker
 - In Kubernetes clusters
 - In cloud-native environments
