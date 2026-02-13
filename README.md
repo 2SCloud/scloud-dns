@@ -164,15 +164,14 @@ This allows microsecond-level packet handling and high request-per-second throug
 
 ---
 
-## Tests
-
-The application includes unit tests:
+## Testing
 
 ```bash
 cargo test
 ```
 
-To see test coverage, check https://2scloud.github.io/scloud-dns/coverage.
+Coverage:
+[https://2scloud.github.io/scloud-dns/](https://2scloud.github.io/scloud-dns/)
 
 ---
 
@@ -285,15 +284,6 @@ These tools help diagnose:
 - Kernel buffer saturation
 - CPU bottlenecks
 - Thread imbalance
-
----
-
-## Testing
-
-cargo test
-
-Coverage:
-[https://2scloud.github.io/scloud-dns/](https://2scloud.github.io/scloud-dns/)
 
 ---
 
