@@ -191,14 +191,36 @@ macro_rules! __log_internal {
     ($lvl:expr, $otel_lvl:expr, $($arg:tt)*) => {{
         let target = concat!(module_path!(), ":", line!());
 
-        if $otel_lvl != "TRACE" || $otel_lvl != "DEBUG" {}
-        if let Some(sender) = $crate::utils::logging::LOG_SENDER.get() {
-            let _ = sender.try_send($crate::utils::logging::OtelLog {
-                target: target.to_string(),
-                severity: $otel_lvl,
-                message: format!($($arg)*),
-                timestamp_unix_nano: $crate::utils::time::now_unix_nano(),
-            });
+        if $otel_lvl != "TRACE" || $otel_lvl != "DEBUG" {
+            if $otel_lvl == "STRACE" {
+                if let Some(sender) = $crate::utils::logging::LOG_SENDER.get() {
+                    let _ = sender.try_send($crate::utils::logging::OtelLog {
+                        target: target.to_string(),
+                        severity: "TRACE",
+                        message: format!($($arg)*),
+                        timestamp_unix_nano: $crate::utils::time::now_unix_nano(),
+                    });
+                }
+            } else if $otel_lvl == "SDEBUG" {
+                if let Some(sender) = $crate::utils::logging::LOG_SENDER.get() {
+                    let _ = sender.try_send($crate::utils::logging::OtelLog {
+                        target: target.to_string(),
+                        severity: "DEBUG",
+                        message: format!($($arg)*),
+                        timestamp_unix_nano: $crate::utils::time::now_unix_nano(),
+                    });
+                }
+            }
+            else {
+                if let Some(sender) = $crate::utils::logging::LOG_SENDER.get() {
+                    let _ = sender.try_send($crate::utils::logging::OtelLog {
+                        target: target.to_string(),
+                        severity: $otel_lvl,
+                        message: format!($($arg)*),
+                        timestamp_unix_nano: $crate::utils::time::now_unix_nano(),
+                    });
+                }
+            }
         }
 
         $crate::utils::logging::log(
@@ -217,9 +239,23 @@ macro_rules! log_trace {
 }
 
 #[macro_export]
+macro_rules! log_strace {
+    ($($arg:tt)*) => {
+        $crate::__log_internal!($crate::config::LogLevel::TRACE, "STRACE", $($arg)*);
+    };
+}
+
+#[macro_export]
 macro_rules! log_debug {
     ($($arg:tt)*) => {
         $crate::__log_internal!($crate::config::LogLevel::DEBUG, "DEBUG", $($arg)*);
+    };
+}
+
+#[macro_export]
+macro_rules! log_sdebug {
+    ($($arg:tt)*) => {
+        $crate::__log_internal!($crate::config::LogLevel::DEBUG, "SDEBUG", $($arg)*);
     };
 }
 

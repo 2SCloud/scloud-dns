@@ -4,8 +4,8 @@ use tokio::sync::{mpsc};
 use bytes::{Buf, Bytes};
 use tokio::net::UdpSocket;
 use crate::exceptions::SCloudException;
-use crate::threads::{SCloudWorker, WorkerType};
-use crate::threads::task::{InFlightTask, SCloudWorkerTask};
+use crate::workers::{SCloudWorker, WorkerType};
+use crate::workers::task::{InFlightTask, SCloudWorkerTask};
 use crate::utils;
 
 pub async fn run_dns_listener(

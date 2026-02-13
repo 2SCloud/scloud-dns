@@ -98,10 +98,6 @@ pub enum SCloudException {
     SCLOUD_LOGGING_PATH_CREATION_FAILED,
     SCLOUD_LOGGING_FILE_CREATION_OR_OPENING_FAILED,
 
-    // THREADS
-    SCLOUD_THREADS_FAILED_TO_SPAWN,
-    SCLOUD_THREADS_SPAWN_CONFIG_WORKER_TYPE_MISMATCH,
-
     // WORKER
     SCLOUD_WORKER_FAILED_TO_SPAWN,
     SCLOUD_WORKER_TX_NOT_SET,
@@ -336,14 +332,6 @@ impl SCloudException {
             }
             SCloudException::SCLOUD_LOGGING_FILE_CREATION_OR_OPENING_FAILED => {
                 "Log file creation/opening failed."
-            }
-
-            // THREADS
-            SCloudException::SCLOUD_THREADS_FAILED_TO_SPAWN => {
-                "Impossible to spawn a thread."
-            }
-            SCloudException::SCLOUD_THREADS_SPAWN_CONFIG_WORKER_TYPE_MISMATCH => {
-                "Worker type mismatch for SpawnConfig::init()."
             }
 
             // WORKER

@@ -1,55 +1,16 @@
 use crate::exceptions::SCloudException;
 use anyhow::Result;
-use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
-use std::thread::Thread;
-use crate::{log_debug, log_error, utils};
+use crate::{log_error, log_info, log_sdebug, log_strace, utils};
 use tokio::sync::{mpsc, Mutex, Semaphore};
 use std::sync::Arc;
-use futures_util::task::Spawn;
-use crate::threads::task::InFlightTask;
+use crate::workers::task::InFlightTask;
 
 pub(crate) mod task;
 pub(crate) mod tests;
 pub(crate) mod queue;
-pub(crate) mod workers;
-
-#[cfg(windows)]
-mod windows;
-
-#[cfg(target_os = "linux")]
-mod linux;
-
-#[cfg(target_os = "macos")]
-mod macos;
-
-#[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
-mod others;
-
-#[cfg(windows)]
-mod thread {
-    pub(crate) use crate::threads::windows::imp as thread_base;
-    pub(crate) use crate::threads::windows::priority::imp as priority;
-}
-
-#[cfg(target_os = "linux")]
-mod thread {
-    pub(crate) use crate::threads::linux::imp as thread_base;
-    pub(crate) use crate::threads::linux::priority::imp as priority;
-}
-
-#[cfg(target_os = "macos")]
-mod thread {
-    pub(crate) use crate::threads::macos::imp as thread_base;
-    pub(crate) use crate::threads::macos::priority::imp as priority;
-}
-
-#[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
-mod thread {
-    pub(crate) use crate::threads::others::imp as thread_base;
-    pub(crate) use crate::threads::others::priority::imp as priority;
-}
+pub(crate) mod types;
 
 #[allow(unused)]
 #[allow(non_camel_case_types)]
@@ -71,8 +32,6 @@ mod thread {
 pub(crate) struct SCloudWorker {
     // IDENTITY
     pub(crate) worker_id: u64,
-    pub(crate) os_thread_id: AtomicU64,
-    pub(crate) os_thread_name: String,
     pub(crate) worker_type: WorkerType,
 
     // CHANNEL
@@ -84,12 +43,6 @@ pub(crate) struct SCloudWorker {
     pub(crate) buffer_budget_bytes: AtomicUsize,
     pub(crate) max_stack_size_bytes: AtomicUsize,
     pub(crate) max_buffer_budget_bytes: AtomicUsize,
-
-    // SCHEDULING/PRIORITY
-    pub(crate) priority: AtomicU8,
-    pub(crate) priority_scope: AtomicU8,
-    last_applied_priority: AtomicU8,
-    last_applied_scope: AtomicU8,
 
     // RUNTIME STATE
     pub(crate) state: AtomicU8,
@@ -115,9 +68,6 @@ pub(crate) struct SCloudWorker {
     // CORRELATION/TRACING
     pub(crate) last_task_id_hi: AtomicU64, // 128-bit UUID split
     pub(crate) last_task_id_lo: AtomicU64,
-
-    // BROKER RELATED
-    pub(crate) consumer_tag_hash: AtomicU64, // find which consumer RabbitMQ (hash)
 }
 
 #[allow(unused)]
@@ -126,19 +76,8 @@ impl SCloudWorker {
 
     pub(crate) fn new(worker_id: u64, worker_type: WorkerType) -> Result<Self, SCloudException> {
 
-        let thread_name = match worker_type {
-            WorkerType::LISTENER => format!("scloud-dns-listener-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
-            WorkerType::DECODER  => format!("scloud-dns-decoder-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
-            WorkerType::QUERY_DISPATCHER => format!("scloud-dns-qd-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
-            WorkerType::RESOLVER => format!("scloud-dns-resolver-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
-            WorkerType::SENDER => format!("scloud-dns-sender-{}", utils::uuid::uuid_as_static_str(utils::uuid::generate_uuid())),
-            _ => return Err(SCloudException::SCLOUD_THREADS_SPAWN_CONFIG_WORKER_TYPE_MISMATCH),
-        };
-
         Ok(Self {
             worker_id,
-            os_thread_id: AtomicU64::new(0),
-            os_thread_name: thread_name,
             worker_type,
             dns_tx: Mutex::new(None),
             dns_rx: Mutex::new(None),
@@ -146,10 +85,6 @@ impl SCloudWorker {
             buffer_budget_bytes: AtomicUsize::new(4 * 1024 * 1024),
             max_stack_size_bytes: AtomicUsize::new(32 * 1024 * 1024),
             max_buffer_budget_bytes: AtomicUsize::new(256 * 1024 * 1024),
-            priority: AtomicU8::new(ThreadPriority::NORMAL as u8),
-            priority_scope: AtomicU8::new(PriorityScope::THREAD as u8),
-            last_applied_priority: AtomicU8::new(Self::NEVER_APPLIED),
-            last_applied_scope: AtomicU8::new(Self::NEVER_APPLIED),
             state: AtomicU8::new(WorkerState::IDLE as u8),
             shutdown_requested: AtomicBool::new(false),
             shutdown_mode: AtomicU8::new(ShutdownMode::GRACEFUL as u8),
@@ -165,14 +100,15 @@ impl SCloudWorker {
             last_error_at_ms: AtomicU64::new(0),
             last_task_id_hi: AtomicU64::new(0),
             last_task_id_lo: AtomicU64::new(0),
-            consumer_tag_hash: AtomicU64::new(0),
         })
     }
 
     pub(crate) async fn run(self: Arc<Self>) -> Result<(), SCloudException> {
         let worker = self.as_ref();
 
-        log_debug!("Running SCloudWorker [ID: {}][TYPE: {:?}]", worker.worker_id, worker.worker_type);
+        log_sdebug!("Running SCloudWorker [ID: {}][TYPE: {:?}]", worker.worker_id, worker.worker_type);
+        // TODO: finish this trace datails
+        log_strace!("SCloudWorker [ID: {}][TYPE: {:?}]", worker.worker_id, worker.worker_type);
         match worker.worker_type {
             WorkerType::LISTENER => {
                 let tx = self.dns_tx.lock().await
@@ -180,7 +116,7 @@ impl SCloudWorker {
                     .cloned()
                     .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET)?;
 
-                workers::listener::run_dns_listener(self.clone(), "0.0.0.0:5353", tx).await?;
+                types::listener::run_dns_listener(self.clone(), "0.0.0.0:5353", tx).await?;
             }
             WorkerType::DECODER => {
                 let tx = self.dns_tx.lock().await
@@ -191,7 +127,7 @@ impl SCloudWorker {
                     .take()
                     .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET)?;
 
-                workers::decoder::run_dns_decoder(self.clone(), rx, tx).await?;
+                types::decoder::run_dns_decoder(self.clone(), rx, tx).await?;
             }
             WorkerType::QUERY_DISPATCHER => {
                 let tx = self.dns_tx.lock().await
@@ -202,7 +138,7 @@ impl SCloudWorker {
                     .take()
                     .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET)?;
 
-                workers::query_dispatcher::run_dns_query_dispatcher(self.clone(), rx, tx).await?;
+                types::query_dispatcher::run_dns_query_dispatcher(self.clone(), rx, tx).await?;
             }
             WorkerType::CACHE_LOOKUP => {
 
@@ -219,7 +155,7 @@ impl SCloudWorker {
                     .take()
                     .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET)?;
 
-                workers::resolver::run_dns_resolver(self.clone(), rx, tx).await?;
+                types::resolver::run_dns_resolver(self.clone(), rx, tx).await?;
             }
             WorkerType::CACHE_WRITER => {
 
@@ -234,7 +170,7 @@ impl SCloudWorker {
 
             }
             WorkerType::METRICS => {
-                workers::metrics::start_otlp_logger().await;
+                types::metrics::start_otlp_logger().await;
             }
             WorkerType::TCP_ACCEPTOR => {
 
@@ -249,11 +185,6 @@ impl SCloudWorker {
     #[inline]
     pub fn get_worker_id(&self) -> u64 {
         self.worker_id
-    }
-
-    #[inline]
-    pub fn get_os_thread_id(&self) -> u64 {
-        self.os_thread_id.load(Ordering::Relaxed)
     }
 
     #[inline]
@@ -279,26 +210,6 @@ impl SCloudWorker {
     #[inline]
     pub fn get_max_buffer_budget_bytes(&self) -> usize {
         self.max_buffer_budget_bytes.load(Ordering::Relaxed)
-    }
-
-    #[inline]
-    pub fn get_priority(&self) -> u8 {
-        self.priority.load(Ordering::Relaxed)
-    }
-
-    #[inline]
-    pub fn get_priority_scope(&self) -> u8 {
-        self.priority_scope.load(Ordering::Relaxed)
-    }
-
-    #[inline]
-    pub fn get_last_applied_priority(&self) -> u8 {
-        self.last_applied_priority.load(Ordering::Relaxed)
-    }
-
-    #[inline]
-    pub fn get_last_applied_scope(&self) -> u8 {
-        self.last_applied_scope.load(Ordering::Relaxed)
     }
 
     #[inline]
@@ -377,18 +288,8 @@ impl SCloudWorker {
     }
 
     #[inline]
-    pub fn get_consumer_tag_hash(&self) -> u64 {
-        self.consumer_tag_hash.load(Ordering::Relaxed)
-    }
-
-    #[inline]
     pub fn set_worker_id(&mut self, worker_id: u64) {
         self.worker_id = worker_id;
-    }
-
-    #[inline]
-    pub fn set_os_thread_id(&mut self, os_thread_id: u64) {
-        self.os_thread_id.store(os_thread_id, Ordering::Relaxed)
     }
 
     #[inline]
@@ -428,28 +329,6 @@ impl SCloudWorker {
     pub fn set_max_buffer_budget_bytes(&mut self, max_buffer_budget_bytes: usize) {
         self.max_buffer_budget_bytes
             .store(max_buffer_budget_bytes, Ordering::Relaxed);
-    }
-
-    #[inline]
-    pub fn set_priority(&mut self, priority: u8) {
-        self.priority.store(priority, Ordering::Relaxed);
-    }
-
-    #[inline]
-    pub fn set_priority_scope(&mut self, priority_scope: u8) {
-        self.priority_scope.store(priority_scope, Ordering::Relaxed);
-    }
-
-    #[inline]
-    pub fn set_last_applied_priority(&mut self, last_applied_priority: u8) {
-        self.last_applied_priority
-            .store(last_applied_priority, Ordering::Relaxed);
-    }
-
-    #[inline]
-    pub fn set_last_applied_scope(&mut self, last_applied_scope: u8) {
-        self.last_applied_scope
-            .store(last_applied_scope, Ordering::Relaxed);
     }
 
     #[inline]
@@ -528,12 +407,6 @@ impl SCloudWorker {
         self.last_task_id_lo
             .store(last_task_id_lo, Ordering::Relaxed);
     }
-
-    #[inline]
-    pub fn set_consumer_tag_hash(&mut self, consumer_tag_hash: u64) {
-        self.consumer_tag_hash
-            .store(consumer_tag_hash, Ordering::Relaxed);
-    }
 }
 
 #[allow(unused)]
@@ -576,141 +449,22 @@ pub enum WorkerType {
     TCP_ACCEPTOR,
 }
 
-#[repr(u8)]
-#[allow(unused)]
-#[allow(non_camel_case_types)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum ClassPriority {
-    IDLE = 0,
-    BELOW_NORMAL = 1,
-    NORMAL = 2,
-    ABOVE_NORMAL = 3,
-    HIGH = 4,
-    REALTIME = 5,
-}
+pub fn spawn_worker(
+    worker: Arc<SCloudWorker>,
+) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        log_info!(
+            "Worker {} ({:?}) started",
+            worker.worker_id,
+            worker.worker_type
+        );
 
-impl ClassPriority {
-    #[inline]
-    #[allow(unused)]
-    pub fn from_u8(v: u8) -> Self {
-        match v {
-            0 => Self::IDLE,
-            1 => Self::BELOW_NORMAL,
-            2 => Self::NORMAL,
-            3 => Self::ABOVE_NORMAL,
-            4 => Self::HIGH,
-            5 => Self::REALTIME,
-            _ => {
-                debug_assert!(false, "invalid ClassPriority value: {}", v);
-                Self::NORMAL
-            }
+        if let Err(e) = worker.clone().run().await {
+            log_error!(
+                "Worker {} failed: {:?}",
+                worker.worker_id,
+                e
+            );
         }
-    }
-
-    #[inline]
-    #[allow(unused)]
-    pub fn to_unix_nice(self) -> i32 {
-        match self {
-            Self::IDLE => 19,
-            Self::BELOW_NORMAL => 10,
-            Self::NORMAL => 0,
-            Self::ABOVE_NORMAL => -5,
-            Self::HIGH => -10,
-            Self::REALTIME => -20, // Not true RT; this is "strongly favored timesharing" at best.
-        }
-    }
+    })
 }
-
-#[repr(u8)]
-#[allow(unused)]
-#[allow(non_camel_case_types)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum ThreadPriority {
-    IDLE = 0,
-    LOW = 1,
-    BELOW_NORMAL = 2,
-    NORMAL = 3,
-    ABOVE_NORMAL = 4,
-    HIGH = 5,
-    REALTIME = 6,
-}
-
-impl ThreadPriority {
-    #[inline]
-    #[allow(unused)]
-    fn from_u8(v: u8) -> Self {
-        match v {
-            0 => Self::IDLE,
-            1 => Self::LOW,
-            2 => Self::BELOW_NORMAL,
-            3 => Self::NORMAL,
-            4 => Self::ABOVE_NORMAL,
-            5 => Self::HIGH,
-            6 => Self::REALTIME,
-            _ => {
-                debug_assert!(false, "invalid ThreadPriority value: {}", v);
-                Self::NORMAL
-            }
-        }
-    }
-}
-
-#[repr(u8)]
-#[allow(unused)]
-#[allow(non_camel_case_types)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum PriorityScope {
-    THREAD = 0,
-    PROCESS = 1,
-    USER = 2,
-    PROCESS_GROUP = 3,
-}
-
-impl PriorityScope {
-    #[inline]
-    #[allow(unused)]
-    fn from_u8(v: u8) -> Self {
-        match v {
-            0 => Self::THREAD,
-            1 => Self::PROCESS,
-            2 => Self::USER,
-            3 => Self::PROCESS_GROUP,
-            _ => {
-                debug_assert!(false, "invalid PriorityScope value: {}", v);
-                Self::THREAD
-            }
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct SpawnConfig<'a> {
-    pub name: Option<&'a str>,
-    pub stack_size: Option<usize>,
-}
-
-impl<'a> Default for SpawnConfig<'a> {
-    fn default() -> Self {
-        Self {
-            name: None,
-            stack_size: None,
-        }
-    }
-}
-
-#[allow(unused)]
-pub fn new<F, T>(cfg: SpawnConfig<'_>, f: F) -> Result<std::thread::JoinHandle<T>, SCloudException>
-where
-    F: FnOnce() -> T + Send + 'static,
-    T: Send + 'static,
-{
-    thread::thread_base::new(cfg, f)
-}
-
-// TODO: Impl that to SCloudWorker and modify it (he will take the os_thread_id linked to the worker)
-// TODO: should return an ScloudException
-#[allow(unused)]
-pub fn set_priority(scope: PriorityScope, p: ThreadPriority) -> std::io::Result<()> {
-    thread::priority::set_priority(scope, p)
-}
-
