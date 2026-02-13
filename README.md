@@ -333,9 +333,9 @@ But never the hot request path.
 Contributions are welcome!
 
 1. Fork the project
-2. Create your branch: `git checkout -b feature/issue-XXXX` or `fix/issue-XXXX`
+2. Create your branch: `git checkout -b feat/issue-XXXX` or `fix/issue-XXXX`
 3. Commit your changes: `git commit -m "feat(scope-here): your message here"` or `git commit -m "fix(scope-here): your message here"`...
-4. Push your branch: `git push origin feature/issue-XXXX` or `fix/issue-XXXX`
+4. Push your branch: `git push origin feat/issue-XXXX` or `fix/issue-XXXX`
 5. Open a Pull Request
 
 ---
