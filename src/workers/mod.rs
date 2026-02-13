@@ -252,8 +252,8 @@ impl SCloudWorker {
     }
 
     #[inline]
-    pub fn get_in_flight_sem(&self) -> Arc<Semaphore> {
-        self.in_flight_sem.clone()
+    pub fn get_in_flight_sem(&self) -> usize {
+        self.in_flight_sem.available_permits()
     }
 
     #[inline]
@@ -426,6 +426,7 @@ impl SCloudWorker {
         self.last_task_id_lo
             .store(last_task_id_lo, Ordering::Relaxed);
     }
+
 }
 
 #[allow(unused)]

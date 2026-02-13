@@ -351,12 +351,12 @@ impl SCloudException {
                 "Failed to create a decoding worker."
             }
             SCloudException::SCLOUD_WORKER_UNKNOWN_TYPE => {
-                "Unknown type."
+                "Unknown worker type."
             }
 
             // LISTENER
             SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED => {
-                ""
+                "Listener revc() failed"
             }
             _ => "Unknown error.",
         }

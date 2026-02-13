@@ -4,7 +4,7 @@ mod tests {
     use std::sync::Arc;
     use crate::{exceptions, workers};
     use std::sync::atomic::Ordering;
-    use tokio::sync::mpsc;
+    use tokio::sync::{mpsc, Semaphore};
     use crate::workers::task::InFlightTask;
 
     #[test]
@@ -249,6 +249,172 @@ mod tests {
 
         let err = w.clone().run().await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_TX_NOT_SET));
+    }
+
+    #[test]
+    fn test_get_worker_id() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(3, w.get_worker_id());
+    }
+
+    #[test]
+    fn test_get_worker_type() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(workers::WorkerType::TCP_ACCEPTOR, w.get_worker_type());
+    }
+
+    #[tokio::test]
+    async fn test_get_dns_rx_tx() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+
+        let (tx0, rx0) = mpsc::channel::<InFlightTask>(8);
+        *w.dns_rx.lock().await = Some(rx0);
+        *w.dns_tx.lock().await = Some(tx0);
+
+        let (rx, tx) = w.get_dns_rx_tx().await.expect("should return rx+tx");
+
+        assert!(w.dns_rx.lock().await.is_none());
+        assert!(w.dns_tx.lock().await.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_get_dns_rx() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+
+        let (tx0, rx0) = mpsc::channel::<InFlightTask>(8);
+        *w.dns_rx.lock().await = Some(rx0);
+        *w.dns_tx.lock().await = Some(tx0);
+
+        let rx = w.get_dns_rx().await.expect("should return rx");
+
+        assert!(w.dns_rx.lock().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_get_dns_tx() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+
+        let (tx0, rx0) = mpsc::channel::<InFlightTask>(8);
+        *w.dns_rx.lock().await = Some(rx0);
+        *w.dns_tx.lock().await = Some(tx0);
+
+        let tx = w.get_dns_tx().await.expect("should return tx");
+
+        assert!(w.dns_tx.lock().await.is_some());
+    }
+
+    #[test]
+    pub fn test_get_stack_size_bytes() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_stack_size_bytes(), 2 * 1024 * 1024);
+    }
+
+    #[test]
+    pub fn test_get_buffer_budget_bytes() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_buffer_budget_bytes(), 4 * 1024 * 1024);
+    }
+
+    #[test]
+    pub fn test_get_max_stack_size_bytes() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_max_stack_size_bytes(), 32 * 1024 * 1024);
+    }
+
+    #[test]
+    pub fn test_get_max_buffer_budget_bytes() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_max_buffer_budget_bytes(), 256 * 1024 * 1024);
+    }
+
+    #[test]
+    pub fn test_get_state() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_state(), workers::WorkerState::INIT as u8);
+    }
+
+    #[test]
+    pub fn test_get_shutdown_requested() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_shutdown_requested(), false)
+    }
+
+    #[test]
+    pub fn test_get_shutdown_mode() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_shutdown_mode(), workers::ShutdownMode::GRACEFUL as u8)
+    }
+
+    #[test]
+    pub fn test_get_in_flight() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_in_flight(), 0)
+    }
+
+    #[test]
+    pub fn test_get_in_flight_sem() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_in_flight_sem(), 512)
+    }
+
+    #[test]
+    pub fn test_get_max_in_flight() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_max_in_flight(), 512)
+    }
+
+    #[test]
+    pub fn test_get_jobs_done() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_jobs_done(), 0)
+    }
+
+    #[test]
+    pub fn test_get_jobs_failed() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_jobs_failed(), 0)
+    }
+
+    #[test]
+    pub fn test_get_jobs_retried() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_jobs_retried(), 0)
+    }
+
+    #[test]
+    pub fn test_get_last_job_started_ms() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_last_job_started_ms(), 0)
+    }
+
+    #[test]
+    pub fn test_get_last_job_finished_ms() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_last_job_finished_ms(), 0)
+    }
+
+    #[test]
+    pub fn test_get_last_error_code() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_last_error_code(), 0)
+    }
+
+    #[test]
+    pub fn test_get_last_error_at_ms() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_last_error_at_ms(), 0)
+    }
+
+    #[test]
+    pub fn test_get_last_task_id_hi() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_last_task_id_hi(), 0)
+    }
+
+    #[test]
+    pub fn test_get_last_task_id_lo() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        assert_eq!(w.get_last_task_id_lo(), 0)
     }
 
 }
