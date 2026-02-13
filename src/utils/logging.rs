@@ -191,6 +191,7 @@ macro_rules! __log_internal {
     ($lvl:expr, $otel_lvl:expr, $($arg:tt)*) => {{
         let target = concat!(module_path!(), ":", line!());
 
+        if $otel_lvl != "TRACE" || $otel_lvl != "DEBUG" {}
         if let Some(sender) = $crate::utils::logging::LOG_SENDER.get() {
             let _ = sender.try_send($crate::utils::logging::OtelLog {
                 target: target.to_string(),

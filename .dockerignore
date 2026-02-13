@@ -1,0 +1,10 @@
+target/
+.git/
+.gitignore
+Dockerfile
+**/*.rs.bk
+**/*.log
+**/*.tmp
+.idea/
+.vscode/
+*.md

@@ -3,7 +3,7 @@ use tokio::time::{Duration, Instant};
 use crate::utils::logging::{build_otlp_payload, OtelLog, LOG_SENDER};
 
 const CHAN_SIZE: usize = 200_000;
-const MAX_BATCH: usize = 15_000;
+const MAX_BATCH: usize = 512;
 const FLUSH_EVERY: Duration = Duration::from_secs(10);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -22,7 +22,7 @@ pub async fn start_otlp_logger() {
 
     let url = "http://alloy.scloud-observability.svc:4318/v1/logs";
 
-    let mut buf: Vec<OtelLog> = Vec::with_capacity(MAX_BATCH.min(50_000));
+    let mut buf: Vec<OtelLog> = Vec::with_capacity(MAX_BATCH);
     let mut ticker = tokio::time::interval(FLUSH_EVERY);
     ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 

@@ -18,7 +18,7 @@ spec:
           emptyDir: {}
       containers:
         - name: rust-dns
-          image: ghcr.io/2scloud/scloud-dns:0.2.1
+          image: ghcr.io/2scloud/scloud-dns:0.2.1-live-stdout
           imagePullPolicy: Always
           ports:
             - name: dns-udp
