@@ -139,7 +139,6 @@ Each component of the DNS pipeline runs in a dedicated worker:
 
 Each worker:
 
-- Runs in its own OS thread
 - Communicates through in-memory channels
 - Has concurrency limits enforced by a Semaphore
 
