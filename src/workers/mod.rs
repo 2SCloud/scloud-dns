@@ -14,21 +14,6 @@ pub(crate) mod types;
 
 #[allow(unused)]
 #[allow(non_camel_case_types)]
-/// Internal worker descriptor and runtime controls.
-///
-/// - Mutable runtime knobs are atomics for lock-free internal control updates.
-/// - Non-atomic fields are treated as immutable after construction (engine-dev only).
-///
-/// Notes:
-/// - `os_thread_id` is for diagnostics only (`0` = unset/invalid). Do not treat it as a liveness guarantee.
-/// - `priority`/`priority_scope` store the *desired* policy; internal code must explicitly apply it.
-/// - On macOS, priority is applied via QoS by default. Enabling the optional `mach-rt` feature may
-///   apply a true Mach real-time policy for `ThreadPriority::REALTIME` (advanced/potentially disruptive).
-/// - `stack_size_bytes` is a spawn-time knob on most platforms; updates typically only affect *future spawns*
-///   (e.g., after respawn/restart), not an already-running thread.
-///
-/// Incoming:
-/// - CPU affinity/processor binding
 pub(crate) struct SCloudWorker {
     // IDENTITY
     pub(crate) worker_id: u64,
