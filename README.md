@@ -114,7 +114,6 @@ The compiled binary will be located in `target/release/scloud-dns`.
 
 - Rust
 - Tokio
-- OS threads (one per worker)
 - Message passing (tokio::mpsc)
 - Semaphore-based backpressure
 - Atomic state tracking
