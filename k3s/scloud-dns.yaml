@@ -20,7 +20,11 @@ spec:
         - name: rust-dns
           image: ghcr.io/2scloud/scloud-dns:0.2.1-live-stdout
           imagePullPolicy: Always
-          size: 1Gi
+          resources:
+            requests:
+              ephemeral-storage: "500Mi"
+            limits:
+              ephemeral-storage: "1Gi"
           ports:
             - name: dns-udp
               containerPort: 53
