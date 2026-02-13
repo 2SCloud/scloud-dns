@@ -2,8 +2,8 @@ use crate::exceptions::SCloudException;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
-use crate::{log_error, log_info, log_sdebug, log_strace, utils};
-use tokio::sync::{mpsc, Mutex, Semaphore};
+use crate::{log_error, log_info, log_sdebug, log_strace};
+use tokio::sync::{mpsc, Mutex, MutexGuard, Semaphore};
 use std::sync::Arc;
 use crate::workers::task::InFlightTask;
 
@@ -14,6 +14,7 @@ pub(crate) mod types;
 
 #[allow(unused)]
 #[allow(non_camel_case_types)]
+#[derive(Debug)]
 pub(crate) struct SCloudWorker {
     // IDENTITY
     pub(crate) worker_id: u64,
@@ -75,7 +76,7 @@ impl SCloudWorker {
             shutdown_mode: AtomicU8::new(ShutdownMode::GRACEFUL as u8),
             in_flight: AtomicUsize::new(0),
             in_flight_sem: Arc::new(Semaphore::new(512)),
-            max_in_flight: AtomicUsize::new(1),
+            max_in_flight: AtomicUsize::new(512),
             jobs_done: AtomicU64::new(0),
             jobs_failed: AtomicU64::new(0),
             jobs_retried: AtomicU64::new(0),
