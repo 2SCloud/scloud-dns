@@ -22,10 +22,10 @@ spec:
           imagePullPolicy: Always
           ports:
             - name: dns-udp
-              containerPort: 5353
+              containerPort: 53
               protocol: UDP
             - name: dns-tcp
-              containerPort: 5353
+              containerPort: 53
               protocol: TCP
           volumeMounts:
             - name: logs
@@ -57,10 +57,10 @@ spec:
   ports:
     - name: dns-udp
       port: 53
-      targetPort: 5353
+      targetPort: 53
       protocol: UDP
     - name: dns-tcp
       port: 53
-      targetPort: 5353
+      targetPort: 53
       protocol: TCP
   type: ClusterIP
