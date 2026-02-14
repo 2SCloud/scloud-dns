@@ -5,7 +5,7 @@ mod tests {
 
     #[test]
     fn test_exceptions_to_str() {
-        let ex_msg_array: [&'static str; 74] = [
+        let ex_msg_array: [&'static str; 77] = [
             // HEADER SECTION
             "Buffer length is less than header length.",
             "The header is empty.",
@@ -45,6 +45,9 @@ mod tests {
             // RESOLVER
             "DNS response failed validation against the original query.",
             "Record out of zone.",
+            "`AnswerSection.q_name` is not the same as `QuestionSection.q_name`",
+            "`AuthoritySection.q_name` is not the same as `QuestionSection.q_name`",
+            "`AdditionnalSection.q_name` is not the same as `QuestionSection.q_name`",
             // ZONES
             "Zone file not found.",
             "Zone file is empty.",
@@ -126,7 +129,7 @@ mod tests {
     #[test]
     fn test_exceptions_iter_count() {
         let count = SCloudException::iter().count();
-        let expected_count = 74;
+        let expected_count = 77;
         assert_eq!(count, expected_count);
     }
 
