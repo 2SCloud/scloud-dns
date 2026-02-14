@@ -427,8 +427,32 @@ mod tests {
     #[test]
     pub fn test_set_worker_type() {
         let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_worker_type(workers::WorkerType::LISTENER);
+        assert_eq!(w.get_worker_type(), workers::WorkerType::LISTENER);
+        w.set_worker_type(workers::WorkerType::DECODER);
+        assert_eq!(w.get_worker_type(), workers::WorkerType::DECODER);
+        w.set_worker_type(workers::WorkerType::QUERY_DISPATCHER);
+        assert_eq!(w.get_worker_type(), workers::WorkerType::QUERY_DISPATCHER);
+        w.set_worker_type(workers::WorkerType::CACHE_LOOKUP);
+        assert_eq!(w.get_worker_type(), workers::WorkerType::CACHE_LOOKUP);
+        w.set_worker_type(workers::WorkerType::ZONE_MANAGER);
+        assert_eq!(w.get_worker_type(), workers::WorkerType::ZONE_MANAGER);
+        w.set_worker_type(workers::WorkerType::RESOLVER);
+        assert_eq!(w.get_worker_type(), workers::WorkerType::RESOLVER);
+        w.set_worker_type(workers::WorkerType::CACHE_WRITER);
+        assert_eq!(w.get_worker_type(), workers::WorkerType::CACHE_WRITER);
         w.set_worker_type(workers::WorkerType::ENCODER);
         assert_eq!(w.get_worker_type(), workers::WorkerType::ENCODER);
+        w.set_worker_type(workers::WorkerType::SENDER);
+        assert_eq!(w.get_worker_type(), workers::WorkerType::SENDER);
+        w.set_worker_type(workers::WorkerType::CACHE_JANITOR);
+        assert_eq!(w.get_worker_type(), workers::WorkerType::CACHE_JANITOR);
+        w.set_worker_type(workers::WorkerType::METRICS);
+        assert_eq!(w.get_worker_type(), workers::WorkerType::METRICS);
+        w.set_worker_type(workers::WorkerType::TCP_ACCEPTOR);
+        assert_eq!(w.get_worker_type(), workers::WorkerType::TCP_ACCEPTOR);
+        w.set_worker_type(workers::WorkerType::NONE);
+        assert_eq!(w.get_worker_type(), workers::WorkerType::NONE);
     }
 
     #[tokio::test]
@@ -480,6 +504,16 @@ mod tests {
         let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
         w.set_state(workers::WorkerState::PAUSED);
         assert_eq!(workers::WorkerState::try_from(w.get_state()).unwrap(), workers::WorkerState::PAUSED);
+        w.set_state(workers::WorkerState::INIT);
+        assert_eq!(workers::WorkerState::try_from(w.get_state()).unwrap(), workers::WorkerState::INIT);
+        w.set_state(workers::WorkerState::IDLE);
+        assert_eq!(workers::WorkerState::try_from(w.get_state()).unwrap(), workers::WorkerState::IDLE);
+        w.set_state(workers::WorkerState::BUSY);
+        assert_eq!(workers::WorkerState::try_from(w.get_state()).unwrap(), workers::WorkerState::BUSY);
+        w.set_state(workers::WorkerState::STOPPING);
+        assert_eq!(workers::WorkerState::try_from(w.get_state()).unwrap(), workers::WorkerState::STOPPING);
+        w.set_state(workers::WorkerState::STOPPED);
+        assert_eq!(workers::WorkerState::try_from(w.get_state()).unwrap(), workers::WorkerState::STOPPED);
     }
 
     #[test]
@@ -494,6 +528,8 @@ mod tests {
         let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
         w.set_shutdown_mode(workers::ShutdownMode::IMMEDIATE);
         assert_eq!(workers::ShutdownMode::try_from(w.get_shutdown_mode()).unwrap(), workers::ShutdownMode::IMMEDIATE);
+        w.set_shutdown_mode(workers::ShutdownMode::GRACEFUL);
+        assert_eq!(workers::ShutdownMode::try_from(w.get_shutdown_mode()).unwrap(), workers::ShutdownMode::GRACEFUL);
     }
 
     #[test]
@@ -548,26 +584,29 @@ mod tests {
     #[test]
     pub fn test_set_last_error_code() {
         let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
-        w.set_last_job_finished_ms(633);
-        assert_eq!(w.get_last_job_finished_ms(), 633);
-    }/*
+        w.set_last_error_code(39);
+        assert_eq!(w.get_last_error_code(), 39);
+    }
 
     #[test]
     pub fn test_set_last_error_at_ms() {
-        self.last_error_at_ms
-            .store(last_error_at_ms, Ordering::Relaxed);
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_last_error_at_ms(583);
+        assert_eq!(w.get_last_error_at_ms(), 583);
     }
 
     #[test]
     pub fn test_set_last_task_id_hi() {
-        self.last_task_id_hi
-            .store(last_task_id_hi, Ordering::Relaxed);
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_last_task_id_hi(456);
+        assert_eq!(w.get_last_task_id_hi(), 456);
     }
 
     #[test]
     pub fn test_set_last_task_id_lo() {
-        self.last_task_id_lo
-            .store(last_task_id_lo, Ordering::Relaxed);
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_last_task_id_lo(646);
+        assert_eq!(w.get_last_task_id_lo(), 646);
     }
-*/
+
 }

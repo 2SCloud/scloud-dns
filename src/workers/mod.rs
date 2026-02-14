@@ -401,25 +401,25 @@ impl SCloudWorker {
     }
 
     #[inline]
-    pub fn set_last_error_code(&mut self, last_error_code: u64) {
+    pub fn set_last_error_code(&self, last_error_code: u64) {
         self.last_error_code
             .store(last_error_code, Ordering::Relaxed);
     }
 
     #[inline]
-    pub fn set_last_error_at_ms(&mut self, last_error_at_ms: u64) {
+    pub fn set_last_error_at_ms(&self, last_error_at_ms: u64) {
         self.last_error_at_ms
             .store(last_error_at_ms, Ordering::Relaxed);
     }
 
     #[inline]
-    pub fn set_last_task_id_hi(&mut self, last_task_id_hi: u64) {
+    pub fn set_last_task_id_hi(&self, last_task_id_hi: u64) {
         self.last_task_id_hi
             .store(last_task_id_hi, Ordering::Relaxed);
     }
 
     #[inline]
-    pub fn set_last_task_id_lo(&mut self, last_task_id_lo: u64) {
+    pub fn set_last_task_id_lo(&self, last_task_id_lo: u64) {
         self.last_task_id_lo
             .store(last_task_id_lo, Ordering::Relaxed);
     }
