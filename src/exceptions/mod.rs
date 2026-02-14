@@ -51,8 +51,11 @@ pub enum SCloudException {
     SCLOUD_STUB_RESOLVER_FAILED_TO_RECV_FROM_SOCKET,
 
     // RESOLVER
-    SCLOUD_RESOLVER_ANSWER_MISMATCH,
+    SCLOUD_RESOLVER_RESPONSE_MISMATCH,
     SCLOUD_RESOLVER_RECORD_OUT_OF_ZONE,
+    SCLOUD_RESOLVER_ANSWER_QNAME_MISMATCH,
+    SCLOUD_RESOLVER_AUTHORITY_QNAME_MISMATCH,
+    SCLOUD_RESOLVER_ADDITIONNAL_QNAME_MISMATCH,
 
     // ZONES
     SCLOUD_ZONE_PARSER_FILE_NOT_FOUND,
@@ -213,10 +216,19 @@ impl SCloudException {
             }
 
             // RESOLVER
-            SCloudException::SCLOUD_RESOLVER_ANSWER_MISMATCH => {
+            SCloudException::SCLOUD_RESOLVER_RESPONSE_MISMATCH => {
                 "DNS response failed validation against the original query."
             }
             SCloudException::SCLOUD_RESOLVER_RECORD_OUT_OF_ZONE => "Record out of zone.",
+            SCloudException::SCLOUD_RESOLVER_ANSWER_QNAME_MISMATCH => {
+                "`AnswerSection.q_name` is not the same as `QuestionSection.q_name`"
+            }
+            SCloudException::SCLOUD_RESOLVER_AUTHORITY_QNAME_MISMATCH => {
+                "`AuthoritySection.q_name` is not the same as `QuestionSection.q_name`"
+            }
+            SCloudException::SCLOUD_RESOLVER_ADDITIONNAL_QNAME_MISMATCH => {
+                "`AdditionnalSection.q_name` is not the same as `QuestionSection.q_name`"
+            }
 
             // ZONES
             SCloudException::SCLOUD_ZONE_PARSER_FILE_NOT_FOUND => {
@@ -351,12 +363,12 @@ impl SCloudException {
                 "Failed to create a decoding worker."
             }
             SCloudException::SCLOUD_WORKER_UNKNOWN_TYPE => {
-                "Unknown type."
+                "Unknown worker type."
             }
 
             // LISTENER
             SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED => {
-                ""
+                "Listener revc() failed"
             }
             _ => "Unknown error.",
         }

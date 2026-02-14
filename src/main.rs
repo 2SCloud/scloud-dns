@@ -16,6 +16,7 @@ async fn main() -> Result<(), SCloudException> {
     let config = Config::from_file(Path::new("./config/config.json"))?;
     utils::logging::init(config.logging.clone())?;
 
+    // TODO: use this until we organize the starting order of workers
     tokio::spawn(workers::types::metrics::start_otlp_logger());
 
     let (tx_l2d, rx_l2d) = mpsc::channel(1024);
@@ -27,6 +28,7 @@ async fn main() -> Result<(), SCloudException> {
     let decoder  = Arc::new(SCloudWorker::new(2, WorkerType::DECODER)?);
     let qd       = Arc::new(SCloudWorker::new(3, WorkerType::QUERY_DISPATCHER)?);
     let resolver = Arc::new(SCloudWorker::new(4, WorkerType::RESOLVER)?);
+    let metrics  = Arc::new(SCloudWorker::new(5, WorkerType::METRICS)?);
 
     listener.set_dns_tx(tx_l2d).await;
     decoder.set_dns_rx(rx_l2d).await;
@@ -40,6 +42,7 @@ async fn main() -> Result<(), SCloudException> {
     workers::spawn_worker(decoder);
     workers::spawn_worker(qd);
     workers::spawn_worker(resolver);
+    // workers::spawn_worker(metrics);
 
     futures_util::future::pending::<()>().await;
     Ok(())

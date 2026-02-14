@@ -4,7 +4,7 @@ use tokio::sync::{mpsc};
 use bytes::{Buf, Bytes};
 use tokio::net::UdpSocket;
 use crate::exceptions::SCloudException;
-use crate::workers::{SCloudWorker, WorkerType};
+use crate::workers::{SCloudWorker, WorkerState, WorkerType};
 use crate::workers::task::{InFlightTask, SCloudWorkerTask};
 use crate::utils;
 
@@ -15,6 +15,7 @@ pub async fn run_dns_listener(
 ) -> Result<(), SCloudException> {
     let socket = UdpSocket::bind(bind_addr).await.map_err(|_| SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED)?;
     let mut buf = [0u8; 65_535];
+    worker.set_state(WorkerState::IDLE);
 
     loop {
         let (len, src) = socket.recv_from(&mut buf).await.map_err(|_| SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED)?;
