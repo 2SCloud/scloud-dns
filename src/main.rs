@@ -3,12 +3,12 @@ use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use crate::exceptions::SCloudException;
-use crate::threads::{SCloudWorker, WorkerType};
+use crate::workers::{SCloudWorker, WorkerType};
 
 mod config;
 mod dns;
 mod exceptions;
-mod threads;
+mod workers;
 mod utils;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 8)]
@@ -16,7 +16,8 @@ async fn main() -> Result<(), SCloudException> {
     let config = Config::from_file(Path::new("./config/config.json"))?;
     utils::logging::init(config.logging.clone())?;
 
-    tokio::spawn(threads::workers::metrics::start_otlp_logger());
+    // TODO: use this until we organize the starting order of workers
+    tokio::spawn(workers::types::metrics::start_otlp_logger());
 
     let (tx_l2d, rx_l2d) = mpsc::channel(1024);
     let (tx_d2qd, rx_d2qd) = mpsc::channel(1024);
@@ -27,6 +28,7 @@ async fn main() -> Result<(), SCloudException> {
     let decoder  = Arc::new(SCloudWorker::new(2, WorkerType::DECODER)?);
     let qd       = Arc::new(SCloudWorker::new(3, WorkerType::QUERY_DISPATCHER)?);
     let resolver = Arc::new(SCloudWorker::new(4, WorkerType::RESOLVER)?);
+    let metrics  = Arc::new(SCloudWorker::new(5, WorkerType::METRICS)?);
 
     listener.set_dns_tx(tx_l2d).await;
     decoder.set_dns_rx(rx_l2d).await;
@@ -36,10 +38,11 @@ async fn main() -> Result<(), SCloudException> {
     resolver.set_dns_rx(rx_qd2r).await;
     resolver.set_dns_tx(tx_r2s).await;
 
-    threads::workers::spawn_worker(listener);
-    threads::workers::spawn_worker(decoder);
-    threads::workers::spawn_worker(qd);
-    threads::workers::spawn_worker(resolver);
+    workers::spawn_worker(listener);
+    workers::spawn_worker(decoder);
+    workers::spawn_worker(qd);
+    workers::spawn_worker(resolver);
+    // workers::spawn_worker(metrics);
 
     futures_util::future::pending::<()>().await;
     Ok(())

@@ -45,8 +45,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cargo llvm-cov --ignore-filename-regex "main.rs" --json > coverage.json
-          cargo llvm-cov --ignore-filename-regex "main.rs" --html
+          cargo llvm-cov \
+          --ignore-filename-regex "(src/main\.rs|src/bin/dns_stress_test\.rs)" \
+          --json > coverage.json
+          cargo llvm-cov \
+          --ignore-filename-regex "(src/main\.rs|src/bin/dns_stress_test\.rs)" \
+          --html
 
       - name: Generate coverage badge (per OS)
         shell: bash

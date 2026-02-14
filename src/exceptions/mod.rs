@@ -51,8 +51,11 @@ pub enum SCloudException {
     SCLOUD_STUB_RESOLVER_FAILED_TO_RECV_FROM_SOCKET,
 
     // RESOLVER
-    SCLOUD_RESOLVER_ANSWER_MISMATCH,
+    SCLOUD_RESOLVER_RESPONSE_MISMATCH,
     SCLOUD_RESOLVER_RECORD_OUT_OF_ZONE,
+    SCLOUD_RESOLVER_ANSWER_QNAME_MISMATCH,
+    SCLOUD_RESOLVER_AUTHORITY_QNAME_MISMATCH,
+    SCLOUD_RESOLVER_ADDITIONNAL_QNAME_MISMATCH,
 
     // ZONES
     SCLOUD_ZONE_PARSER_FILE_NOT_FOUND,
@@ -97,10 +100,6 @@ pub enum SCloudException {
     // LOGGING
     SCLOUD_LOGGING_PATH_CREATION_FAILED,
     SCLOUD_LOGGING_FILE_CREATION_OR_OPENING_FAILED,
-
-    // THREADS
-    SCLOUD_THREADS_FAILED_TO_SPAWN,
-    SCLOUD_THREADS_SPAWN_CONFIG_WORKER_TYPE_MISMATCH,
 
     // WORKER
     SCLOUD_WORKER_FAILED_TO_SPAWN,
@@ -217,10 +216,19 @@ impl SCloudException {
             }
 
             // RESOLVER
-            SCloudException::SCLOUD_RESOLVER_ANSWER_MISMATCH => {
+            SCloudException::SCLOUD_RESOLVER_RESPONSE_MISMATCH => {
                 "DNS response failed validation against the original query."
             }
             SCloudException::SCLOUD_RESOLVER_RECORD_OUT_OF_ZONE => "Record out of zone.",
+            SCloudException::SCLOUD_RESOLVER_ANSWER_QNAME_MISMATCH => {
+                "`AnswerSection.q_name` is not the same as `QuestionSection.q_name`"
+            }
+            SCloudException::SCLOUD_RESOLVER_AUTHORITY_QNAME_MISMATCH => {
+                "`AuthoritySection.q_name` is not the same as `QuestionSection.q_name`"
+            }
+            SCloudException::SCLOUD_RESOLVER_ADDITIONNAL_QNAME_MISMATCH => {
+                "`AdditionnalSection.q_name` is not the same as `QuestionSection.q_name`"
+            }
 
             // ZONES
             SCloudException::SCLOUD_ZONE_PARSER_FILE_NOT_FOUND => {
@@ -338,14 +346,6 @@ impl SCloudException {
                 "Log file creation/opening failed."
             }
 
-            // THREADS
-            SCloudException::SCLOUD_THREADS_FAILED_TO_SPAWN => {
-                "Impossible to spawn a thread."
-            }
-            SCloudException::SCLOUD_THREADS_SPAWN_CONFIG_WORKER_TYPE_MISMATCH => {
-                "Worker type mismatch for SpawnConfig::init()."
-            }
-
             // WORKER
             SCloudException::SCLOUD_WORKER_FAILED_TO_SPAWN => {
                 "Failed to link the worker to the thread, and cannot spawn a worker."
@@ -363,12 +363,12 @@ impl SCloudException {
                 "Failed to create a decoding worker."
             }
             SCloudException::SCLOUD_WORKER_UNKNOWN_TYPE => {
-                "Unknown type."
+                "Unknown worker type."
             }
 
             // LISTENER
             SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED => {
-                ""
+                "Listener revc() failed"
             }
             _ => "Unknown error.",
         }

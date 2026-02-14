@@ -3,7 +3,7 @@ use crate::dns::q_name::parse_qname;
 use crate::dns::q_type::DNSRecordType;
 use crate::exceptions::SCloudException;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub(crate) struct AuthoritySection {
     pub(crate) q_name: String,
     pub(crate) q_type: DNSRecordType,
