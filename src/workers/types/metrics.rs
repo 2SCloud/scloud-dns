@@ -11,6 +11,7 @@ pub async fn start_otlp_logger() {
     let (tx, mut rx) = mpsc::channel::<OtelLog>(CHAN_SIZE);
 
     if LOG_SENDER.set(tx).is_err() {
+        // TODO: send via log_error!
         eprintln!("OTLP logger already started (LOG_SENDER already set)");
         return;
     }
@@ -20,7 +21,8 @@ pub async fn start_otlp_logger() {
         .build()
         .expect("reqwest client");
 
-    let url = "http://alloy.scloud-observability.svc:4318/v1/logs";
+    // let url = "http://alloy.scloud-observability.svc:4318/v1/logs";
+    let url = "http://localhost:4318/v1/logs";
 
     let mut buf: Vec<OtelLog> = Vec::with_capacity(MAX_BATCH);
     let mut ticker = tokio::time::interval(FLUSH_EVERY);

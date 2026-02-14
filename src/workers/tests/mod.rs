@@ -4,16 +4,16 @@ mod tests {
     use std::sync::Arc;
     use crate::{exceptions, workers};
     use std::sync::atomic::Ordering;
-    use tokio::sync::{mpsc, Semaphore};
+    use tokio::sync::mpsc;
     use crate::workers::task::InFlightTask;
 
     #[test]
     fn test_init_scloud_worker() {
-        let worker = workers::SCloudWorker::new(0, workers::WorkerType::LISTENER)
+        let worker = workers::SCloudWorker::new(0, workers::WorkerType::NONE)
             .unwrap();
 
-        assert_eq!(worker.worker_id, 0);
-        assert_eq!(worker.worker_type, workers::WorkerType::LISTENER);
+        assert_eq!(worker.worker_id.load(Ordering::Relaxed), 0);
+        assert_eq!(workers::WorkerType::try_from(worker.worker_type.load(Ordering::Relaxed)).unwrap(), workers::WorkerType::NONE);
 
         assert_eq!(worker.stack_size_bytes.load(Ordering::Relaxed), 2 * 1024 * 1024);
         assert_eq!(worker.buffer_budget_bytes.load(Ordering::Relaxed), 4 * 1024 * 1024);
@@ -417,4 +417,157 @@ mod tests {
         assert_eq!(w.get_last_task_id_lo(), 0)
     }
 
+    #[test]
+    pub fn test_set_worker_id() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_worker_id(0);
+        assert_eq!(w.get_worker_id(), 0);
+    }
+
+    #[test]
+    pub fn test_set_worker_type() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_worker_type(workers::WorkerType::ENCODER);
+        assert_eq!(w.get_worker_type(), workers::WorkerType::ENCODER);
+    }
+
+    #[tokio::test]
+    pub async fn test_set_dns_tx() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        let (tx0, _) = mpsc::channel::<InFlightTask>(8);
+        w.set_dns_tx(tx0).await;
+        assert!(w.dns_tx.lock().await.is_some())
+    }
+
+    #[tokio::test]
+    pub async fn test_set_dns_rx() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        let (_, rx0) = mpsc::channel::<InFlightTask>(8);
+        w.set_dns_rx(rx0).await;
+        assert!(w.dns_rx.lock().await.is_some());
+    }
+
+    #[test]
+    pub fn test_set_stack_size_bytes() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_stack_size_bytes(64);
+        assert_eq!(w.get_stack_size_bytes(), 64);
+    }
+
+    #[test]
+    pub fn test_set_buffer_budget_bytes() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_buffer_budget_bytes(32);
+        assert_eq!(w.get_buffer_budget_bytes(), 32);
+    }
+
+    #[test]
+    pub fn test_set_max_stack_size_bytes() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_max_stack_size_bytes(32);
+        assert_eq!(w.get_max_stack_size_bytes(), 32);
+    }
+
+    #[test]
+    pub fn test_set_max_buffer_budget_bytes() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_max_buffer_budget_bytes(16);
+        assert_eq!(w.get_max_buffer_budget_bytes(), 16);
+    }
+
+    #[test]
+    pub fn test_set_state() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_state(workers::WorkerState::PAUSED);
+        assert_eq!(workers::WorkerState::try_from(w.get_state()).unwrap(), workers::WorkerState::PAUSED);
+    }
+
+    #[test]
+    pub fn test_set_shutdown_requested() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_shutdown_requested(true);
+        assert_eq!(w.get_shutdown_requested(), true);
+    }
+
+    #[test]
+    pub fn test_set_shutdown_mode() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_shutdown_mode(workers::ShutdownMode::IMMEDIATE);
+        assert_eq!(workers::ShutdownMode::try_from(w.get_shutdown_mode()).unwrap(), workers::ShutdownMode::IMMEDIATE);
+    }
+
+    #[test]
+    pub fn test_set_in_flight() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_in_flight(48);
+        assert_eq!(w.get_in_flight(), 48);
+    }
+
+    #[test]
+    pub fn test_set_max_in_flight() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::CACHE_JANITOR).unwrap());
+        w.set_max_in_flight(84);
+        assert_eq!(w.get_max_in_flight(), 84);
+    }
+
+    #[test]
+    pub fn test_set_jobs_done() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::METRICS).unwrap());
+        w.set_jobs_done(367);
+        assert_eq!(w.get_jobs_done(), 367);
+    }
+
+    #[test]
+    pub fn test_set_jobs_failed() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_jobs_failed(367);
+        assert_eq!(w.get_jobs_failed(), 367);
+    }
+
+    #[test]
+    pub fn test_set_jobs_retried() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_jobs_retried(367);
+        assert_eq!(w.get_jobs_retried(), 367);
+    }
+
+    #[test]
+    pub fn test_set_last_job_started_ms() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_last_job_started_ms(283);
+        assert_eq!(w.get_last_job_started_ms(), 283);
+    }
+
+    #[test]
+    pub fn test_set_last_job_finished_ms() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_last_job_finished_ms(633);
+        assert_eq!(w.get_last_job_finished_ms(), 633);
+    }
+
+    #[test]
+    pub fn test_set_last_error_code() {
+        let w = Arc::new(workers::SCloudWorker::new(3, workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        w.set_last_job_finished_ms(633);
+        assert_eq!(w.get_last_job_finished_ms(), 633);
+    }/*
+
+    #[test]
+    pub fn test_set_last_error_at_ms() {
+        self.last_error_at_ms
+            .store(last_error_at_ms, Ordering::Relaxed);
+    }
+
+    #[test]
+    pub fn test_set_last_task_id_hi() {
+        self.last_task_id_hi
+            .store(last_task_id_hi, Ordering::Relaxed);
+    }
+
+    #[test]
+    pub fn test_set_last_task_id_lo() {
+        self.last_task_id_lo
+            .store(last_task_id_lo, Ordering::Relaxed);
+    }
+*/
 }
