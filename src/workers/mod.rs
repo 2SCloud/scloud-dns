@@ -3,6 +3,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
 use crate::{log_error, log_info, log_sdebug, log_strace};
+use crate::workers::manager::StartGate;
 use tokio::sync::{mpsc, Mutex, MutexGuard, Semaphore};
 use std::sync::Arc;
 use crate::workers::task::InFlightTask;
@@ -11,6 +12,7 @@ pub(crate) mod task;
 pub(crate) mod tests;
 pub(crate) mod queue;
 pub(crate) mod types;
+pub(crate) mod manager;
 
 #[allow(non_camel_case_types)]
 #[derive(Debug)]
@@ -58,10 +60,10 @@ pub(crate) struct SCloudWorker {
 impl SCloudWorker {
     const NEVER_APPLIED: u8 = 0xFF;
 
-    pub(crate) fn new(worker_id: u64, worker_type: WorkerType) -> Result<Self, SCloudException> {
+    pub(crate) fn new(worker_type: WorkerType) -> Result<Self, SCloudException> {
 
         Ok(Self {
-            worker_id: AtomicU64::new(worker_id),
+            worker_id: AtomicU64::new(manager::generate_worker_id()),
             worker_type: AtomicU8::new(worker_type as u8),
             dns_tx: Mutex::new(None),
             dns_rx: Mutex::new(None),
@@ -87,8 +89,11 @@ impl SCloudWorker {
         })
     }
 
-    pub(crate) async fn run(self: Arc<Self>) -> Result<(), SCloudException> {
-        log_sdebug!("Running SCloudWorker [ID: {}][TYPE: {:?}]", self.get_worker_id(), self.worker_type);
+    pub(crate) async fn run(self: Arc<Self>, gate: Option<Arc<StartGate>>) -> Result<(), SCloudException> {
+        log_sdebug!("Running SCloudWorker [ID: {}][TYPE: {:?}]", self.get_worker_id(), self.get_worker_type());
+        if let Some(g) = gate {
+            g.done().await;
+        }
         match WorkerType::try_from(self.worker_type.load(Ordering::Relaxed)).unwrap() {
             WorkerType::LISTENER => {
                 self.clone().set_state(WorkerState::IDLE);
@@ -526,21 +531,15 @@ impl TryFrom<u8> for WorkerType {
 
 pub fn spawn_worker(
     worker: Arc<SCloudWorker>,
+    gate: Arc<StartGate>
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
+        gate.wait_turn(worker.get_worker_id()).await;
 
-        if let Err(e) = worker.clone().run().await {
-            log_error!(
-                "Worker {} failed: {:?}",
-                worker.get_worker_id(),
-                e
-            );
-        } else {
-            log_info!(
-                "Worker {} ({:?}) started",
-                worker.get_worker_id(),
-                worker.worker_type
-            );
+        if let Err(e) = worker.clone().run(Some(gate.clone())).await {
+            log_error!("Worker {} failed: {:?}", worker.get_worker_id(), e);
         }
+
+        gate.done().await;
     })
 }
