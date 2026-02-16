@@ -5,6 +5,7 @@ mod tests {
     use crate::{exceptions, workers};
     use std::sync::atomic::Ordering;
     use tokio::sync::mpsc;
+    use crate::workers::manager::StartGate;
     use crate::workers::task::InFlightTask;
 
     #[test]
@@ -37,63 +38,68 @@ mod tests {
     #[tokio::test]
     async fn test_run_listener_fails_if_tx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::LISTENER).unwrap());
-
-        let err = w.clone().run().await.unwrap_err();
+        let gate = Arc::new(StartGate::new(1));
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_TX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_decoder_fails_if_rx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::DECODER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
         *w.dns_tx.lock().await = Some(tx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_RX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_decoder_fails_if_tx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::DECODER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
         *w.dns_rx.lock().await = Some(rx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_TX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_query_dispatcher_fails_if_rx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::QUERY_DISPATCHER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
         *w.dns_tx.lock().await = Some(tx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_RX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_query_dispatcher_fails_if_tx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::QUERY_DISPATCHER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
         *w.dns_rx.lock().await = Some(rx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_TX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_cache_lookup_fails_if_rx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::CACHE_LOOKUP).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
         *w.dns_tx.lock().await = Some(tx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_RX_NOT_SET));
     }
 
@@ -104,7 +110,7 @@ mod tests {
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
         *w.dns_rx.lock().await = Some(rx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_TX_NOT_SET));
     }
 
@@ -115,7 +121,7 @@ mod tests {
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
         *w.dns_tx.lock().await = Some(tx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_RX_NOT_SET));
     }
 
@@ -126,128 +132,139 @@ mod tests {
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
         *w.dns_rx.lock().await = Some(rx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_TX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_resolver_fails_if_rx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::RESOLVER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
         *w.dns_tx.lock().await = Some(tx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_RX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_resolver_fails_if_tx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::RESOLVER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
         *w.dns_rx.lock().await = Some(rx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_TX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_cache_writer_fails_if_rx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::CACHE_WRITER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
         *w.dns_tx.lock().await = Some(tx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_RX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_cache_writer_fails_if_tx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::CACHE_WRITER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
         *w.dns_rx.lock().await = Some(rx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_TX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_encoder_fails_if_rx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::ENCODER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
         *w.dns_tx.lock().await = Some(tx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_RX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_encoder_fails_if_tx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::ENCODER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
         *w.dns_rx.lock().await = Some(rx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_TX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_sender_fails_if_rx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::SENDER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
         *w.dns_tx.lock().await = Some(tx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_RX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_sender_fails_if_tx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::SENDER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
         *w.dns_rx.lock().await = Some(rx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_TX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_cache_janitor_fails_if_rx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::SENDER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
         *w.dns_tx.lock().await = Some(tx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_RX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_tcp_acceptor_fails_if_rx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
         *w.dns_tx.lock().await = Some(tx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_RX_NOT_SET));
     }
 
     #[tokio::test]
     async fn test_run_tcp_acceptor_fails_if_tx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::TCP_ACCEPTOR).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
         *w.dns_rx.lock().await = Some(rx);
 
-        let err = w.clone().run().await.unwrap_err();
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_TX_NOT_SET));
     }
 
