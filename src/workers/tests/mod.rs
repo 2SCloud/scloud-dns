@@ -107,7 +107,7 @@ mod tests {
     #[tokio::test]
     async fn test_run_cache_lookup_fails_if_tx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::CACHE_LOOKUP).unwrap());
-
+        let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
         *w.dns_rx.lock().await = Some(rx);
