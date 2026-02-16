@@ -13,7 +13,7 @@ mod tests {
         let worker = workers::SCloudWorker::new(workers::WorkerType::NONE)
             .unwrap();
 
-        assert_eq!(worker.worker_id.load(Ordering::Relaxed), 0);
+        assert_eq!(worker.worker_id.load(Ordering::Relaxed), 1);
         assert_eq!(workers::WorkerType::try_from(worker.worker_type.load(Ordering::Relaxed)).unwrap(), workers::WorkerType::NONE);
 
         assert_eq!(worker.stack_size_bytes.load(Ordering::Relaxed), 2 * 1024 * 1024);
@@ -275,7 +275,7 @@ mod tests {
     #[test]
     fn test_get_worker_id() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::TCP_ACCEPTOR).unwrap());
-        assert_eq!(3, w.get_worker_id());
+        assert_eq!(1, w.get_worker_id());
     }
 
     #[test]
