@@ -39,6 +39,7 @@ mod tests {
     async fn test_run_listener_fails_if_tx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::LISTENER).unwrap());
         let gate = Arc::new(StartGate::new(1));
+
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(err, exceptions::SCloudException::SCLOUD_WORKER_TX_NOT_SET));
     }
@@ -107,6 +108,7 @@ mod tests {
     async fn test_run_cache_lookup_fails_if_tx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::CACHE_LOOKUP).unwrap());
 
+
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
         *w.dns_rx.lock().await = Some(rx);
 
@@ -117,6 +119,7 @@ mod tests {
     #[tokio::test]
     async fn test_run_zone_manager_fails_if_rx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::ZONE_MANAGER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
         *w.dns_tx.lock().await = Some(tx);
@@ -128,6 +131,7 @@ mod tests {
     #[tokio::test]
     async fn test_run_zone_manager_fails_if_tx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::ZONE_MANAGER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
         *w.dns_rx.lock().await = Some(rx);
