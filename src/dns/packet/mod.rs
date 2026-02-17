@@ -12,7 +12,7 @@ pub(crate) mod authority;
 pub(crate) mod header;
 pub(crate) mod question;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct DNSPacket {
     pub header: Header,
     pub questions: Vec<QuestionSection>,

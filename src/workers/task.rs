@@ -1,5 +1,5 @@
 use std::net::SocketAddr;
-use crate::threads::WorkerType;
+use crate::workers::WorkerType;
 use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 use bytes::Bytes;

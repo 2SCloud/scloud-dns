@@ -3,7 +3,7 @@ use crate::dns::q_name::parse_qname;
 use crate::dns::q_type::DNSRecordType;
 use crate::exceptions::SCloudException;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct AnswerSection {
     pub q_name: String,
     pub r_type: DNSRecordType,

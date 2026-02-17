@@ -1,6 +1,6 @@
 use crate::exceptions::SCloudException;
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct Header {
     pub id: u16,      // identifier
     pub qr: bool,     // 0 for query, 1 for response

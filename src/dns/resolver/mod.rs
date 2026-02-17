@@ -3,8 +3,38 @@ pub(crate) mod stub;
 use crate::dns::packet::additional::AdditionalSection;
 use crate::dns::packet::answer::AnswerSection;
 use crate::dns::packet::authority::AuthoritySection;
+use crate::dns::packet::DNSPacket;
 use crate::dns::packet::question::QuestionSection;
 use crate::exceptions::SCloudException;
+
+pub(crate) fn check_response_diff(
+    dns_packet: DNSPacket,
+    origin_questions: &[QuestionSection],
+) -> Result<(), SCloudException> {
+    let diff_answers = if !dns_packet.answers.is_empty() {
+        check_answer_diff(origin_questions, &dns_packet.answers)
+    } else {
+        Ok(())
+    };
+
+    let diff_authorities = if !dns_packet.authorities.is_empty() {
+        check_authority_diff(origin_questions, &dns_packet.authorities)
+    } else {
+        Ok(())
+    };
+
+    let diff_additionals = if !dns_packet.additionals.is_empty() {
+        check_additional_diff(origin_questions, &dns_packet.additionals)
+    } else {
+        Ok(())
+    };
+
+    if diff_answers.is_err() || diff_authorities.is_err() || diff_additionals.is_err() {
+        return Err(SCloudException::SCLOUD_RESOLVER_RESPONSE_MISMATCH);
+    }
+
+    Ok(())
+}
 
 /// Check that each question has at least one corresponding record
 /// in the answer, authority, or additional sections.
@@ -38,26 +68,13 @@ use crate::exceptions::SCloudException;
 /// ```
 pub(crate) fn check_answer_diff(
     questions: &[QuestionSection],
-    answers: &[AnswerSection],
-    authorities: &[AuthoritySection],
-    additionals: &[AdditionalSection],
+    answers: &[AnswerSection]
 ) -> Result<(), SCloudException> {
-    for q in questions {
-        let found_in_answers = answers
-            .iter()
-            .any(|a| a.q_name == q.q_name && a.r_class == q.q_class);
-        let found_in_authorities = authorities
-            .iter()
-            .any(|a| a.q_name == q.q_name && a.q_class == q.q_class);
-        let found_in_additionals = additionals
-            .iter()
-            .any(|a| a.q_name == q.q_name && a.q_class == q.q_class);
-
-        if !found_in_answers && !found_in_authorities && !found_in_additionals {
-            return Err(SCloudException::SCLOUD_RESOLVER_ANSWER_MISMATCH);
+    for record in answers.iter() {
+        if !questions.iter().any(|q| record.q_name == q.q_name) {
+            return Err(SCloudException::SCLOUD_RESOLVER_ANSWER_QNAME_MISMATCH);
         }
     }
-
     Ok(())
 }
 
@@ -97,7 +114,7 @@ pub(crate) fn check_authority_diff(
 ) -> Result<(), SCloudException> {
     for record in authorities.iter() {
         if !questions.iter().any(|q| record.q_name == q.q_name) {
-            return Err(SCloudException::SCLOUD_RESOLVER_RECORD_OUT_OF_ZONE);
+            return Err(SCloudException::SCLOUD_RESOLVER_AUTHORITY_QNAME_MISMATCH);
         }
     }
     Ok(())
@@ -139,7 +156,7 @@ pub(crate) fn check_additional_diff(
 ) -> Result<(), SCloudException> {
     for record in additionals.iter() {
         if !questions.iter().any(|q| record.q_name == q.q_name) {
-            return Err(SCloudException::SCLOUD_RESOLVER_RECORD_OUT_OF_ZONE);
+            return Err(SCloudException::SCLOUD_RESOLVER_ADDITIONNAL_QNAME_MISMATCH);
         }
     }
     Ok(())
