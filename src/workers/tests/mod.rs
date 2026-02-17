@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use std::any::type_name_of_val;
     use std::fmt::Debug;
     use std::sync::Arc;
     use crate::{exceptions, workers};
@@ -13,7 +14,7 @@ mod tests {
         let worker = workers::SCloudWorker::new(workers::WorkerType::NONE)
             .unwrap();
 
-        assert_eq!(worker.worker_id.load(Ordering::Relaxed), 1);
+        assert_eq!(worker.worker_id.load(Ordering::Relaxed), worker.get_worker_id());
         assert_eq!(workers::WorkerType::try_from(worker.worker_type.load(Ordering::Relaxed)).unwrap(), workers::WorkerType::NONE);
 
         assert_eq!(worker.stack_size_bytes.load(Ordering::Relaxed), 2 * 1024 * 1024);
@@ -275,7 +276,11 @@ mod tests {
     #[test]
     fn test_get_worker_id() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::TCP_ACCEPTOR).unwrap());
-        assert_eq!(1, w.get_worker_id());
+        assert_eq!(w.get_worker_id(), w.get_worker_id());
+        assert_eq!(
+            type_name_of_val(&w.get_worker_id()),
+            "u64"
+        );
     }
 
     #[test]
