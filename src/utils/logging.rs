@@ -38,7 +38,7 @@ pub fn build_otlp_payload(logs: &[OtelLog]) -> serde_json::Value {
                 ]
             },
             "scopeLogs": [{
-                "scope": { "name": "scloud.logger", "version": "1.0.0" },
+                "scope": { "name": "scloud.logger", "version": "0.2.2" },
                 "logRecords": logs.iter().map(|log| {
                     json!({
                         "timeUnixNano": log.timestamp_unix_nano,
@@ -53,7 +53,6 @@ pub fn build_otlp_payload(logs: &[OtelLog]) -> serde_json::Value {
         }]
     })
 }
-
 /// Initialize global logger.
 /// Call once at startup.
 pub fn init(cfg: LoggingConfig) -> Result<(), SCloudException> {
@@ -84,10 +83,7 @@ pub fn log(level: LogLevel, target: &str, msg: &str) {
         return;
     };
 
-    let mut g = match lock.lock() {
-        Ok(g) => g,
-        Err(poisoned) => poisoned.into_inner(),
-    };
+    let mut g = lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
 
     if level < g.cfg.level {
         return;
