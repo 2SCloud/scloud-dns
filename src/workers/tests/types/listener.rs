@@ -5,7 +5,7 @@ mod tests {
 
     use tokio::net::UdpSocket;
     use tokio::sync::mpsc;
-    use tokio::time::{timeout, Duration};
+    use tokio::time::{Duration, timeout};
 
     use crate::{exceptions, workers};
 
@@ -15,7 +15,9 @@ mod tests {
         w
     }
 
-    fn exhaust_all_permits(worker: &Arc<workers::SCloudWorker>) -> Vec<tokio::sync::OwnedSemaphorePermit> {
+    fn exhaust_all_permits(
+        worker: &Arc<workers::SCloudWorker>,
+    ) -> Vec<tokio::sync::OwnedSemaphorePermit> {
         let mut permits = Vec::new();
         loop {
             match worker.in_flight_sem.clone().try_acquire_owned() {
@@ -80,7 +82,9 @@ mod tests {
 
         match timeout(Duration::from_millis(200), rx.recv()).await {
             Err(_) => {} // OK
-            Ok(Some(_)) => panic!("on ne devait pas recevoir de tâche (permit indisponible), mais une tâche est arrivée"),
+            Ok(Some(_)) => panic!(
+                "on ne devait pas recevoir de tâche (permit indisponible), mais une tâche est arrivée"
+            ),
             Ok(None) => panic!("le channel s'est fermé (listener mort / tx drop) : test invalide"),
         }
 
@@ -117,7 +121,11 @@ mod tests {
         let worker = test_worker(10);
         let (tx, _rx) = mpsc::channel::<workers::task::InFlightTask>(1);
 
-        let res = workers::types::listener::run_dns_listener(worker, "256.256.256.256:53", tx).await;
-        assert_eq!(res, Err(exceptions::SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED));
+        let res =
+            workers::types::listener::run_dns_listener(worker, "256.256.256.256:53", tx).await;
+        assert_eq!(
+            res,
+            Err(exceptions::SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED)
+        );
     }
 }

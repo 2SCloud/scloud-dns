@@ -85,6 +85,4 @@ mod tests {
 
         assert!(Uuid::parse_str(static_str).is_ok());
     }
-
-
 }

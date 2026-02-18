@@ -1,10 +1,10 @@
-use std::net::SocketAddr;
 use crate::workers::WorkerType;
-use serde::{Deserialize, Serialize};
-use std::time::SystemTime;
 use bytes::Bytes;
-use uuid::Uuid;
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
+use std::time::SystemTime;
 use tokio::sync::OwnedSemaphorePermit;
+use uuid::Uuid;
 
 #[allow(unused)]
 #[allow(non_camel_case_types)]
@@ -27,4 +27,3 @@ pub struct InFlightTask {
     pub task: SCloudWorkerTask,
     pub _permit: OwnedSemaphorePermit,
 }
-

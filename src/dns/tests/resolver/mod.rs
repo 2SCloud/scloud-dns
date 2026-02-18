@@ -2,24 +2,24 @@ mod stub;
 
 #[cfg(test)]
 mod tests {
-    use crate::{dns, exceptions};
+    use crate::dns::packet::DNSPacket;
     use crate::dns::packet::additional::AdditionalSection;
     use crate::dns::packet::answer::AnswerSection;
     use crate::dns::packet::authority::AuthoritySection;
-    use crate::dns::packet::DNSPacket;
     use crate::dns::packet::header::Header;
     use crate::dns::packet::question::QuestionSection;
+    use crate::{dns, exceptions};
 
     #[test]
     fn test_check_response_diff() {
-        let origin_q = QuestionSection{
+        let origin_q = QuestionSection {
             q_name: "github.com".to_string(),
             q_type: dns::q_type::DNSRecordType::A,
             q_class: dns::q_class::DNSClass::IN,
         };
         let response_packet = DNSPacket {
             header: Header::default(),
-            questions: vec![QuestionSection{
+            questions: vec![QuestionSection {
                 q_name: "github.com".to_string(),
                 q_type: dns::q_type::DNSRecordType::A,
                 q_class: dns::q_class::DNSClass::IN,
@@ -41,14 +41,14 @@ mod tests {
 
     #[test]
     fn test_check_response_diff_err() {
-        let origin_q = QuestionSection{
+        let origin_q = QuestionSection {
             q_name: "github.com".to_string(),
             q_type: dns::q_type::DNSRecordType::A,
             q_class: dns::q_class::DNSClass::IN,
         };
         let response_packet = DNSPacket {
             header: Header::default(),
-            questions: vec![QuestionSection{
+            questions: vec![QuestionSection {
                 q_name: "github.com".to_string(),
                 q_type: dns::q_type::DNSRecordType::A,
                 q_class: dns::q_class::DNSClass::IN,
@@ -65,12 +65,15 @@ mod tests {
             additionals: vec![],
         };
         let result = dns::resolver::check_response_diff(response_packet, &[origin_q]).unwrap_err();
-        assert_eq!(result, exceptions::SCloudException::SCLOUD_RESOLVER_RESPONSE_MISMATCH);
+        assert_eq!(
+            result,
+            exceptions::SCloudException::SCLOUD_RESOLVER_RESPONSE_MISMATCH
+        );
     }
 
     #[test]
     fn test_check_answer_diff() {
-        let q = QuestionSection{
+        let q = QuestionSection {
             q_name: "github.com".to_string(),
             q_type: dns::q_type::DNSRecordType::A,
             q_class: dns::q_class::DNSClass::IN,
@@ -89,7 +92,7 @@ mod tests {
 
     #[test]
     fn test_check_answer_diff_err() {
-        let q = QuestionSection{
+        let q = QuestionSection {
             q_name: "github.com".to_string(),
             q_type: dns::q_type::DNSRecordType::A,
             q_class: dns::q_class::DNSClass::IN,
@@ -103,12 +106,15 @@ mod tests {
             rdata: vec![],
         };
         let result = dns::resolver::check_answer_diff(&[q], &[a]).unwrap_err();
-        assert_eq!(result, exceptions::SCloudException::SCLOUD_RESOLVER_ANSWER_QNAME_MISMATCH);
+        assert_eq!(
+            result,
+            exceptions::SCloudException::SCLOUD_RESOLVER_ANSWER_QNAME_MISMATCH
+        );
     }
 
     #[test]
     fn test_check_authority_diff() {
-        let q = QuestionSection{
+        let q = QuestionSection {
             q_name: "github.com".to_string(),
             q_type: dns::q_type::DNSRecordType::A,
             q_class: dns::q_class::DNSClass::IN,
@@ -126,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_check_authority_diff_err() {
-        let q = QuestionSection{
+        let q = QuestionSection {
             q_name: "github.com".to_string(),
             q_type: dns::q_type::DNSRecordType::A,
             q_class: dns::q_class::DNSClass::IN,
@@ -139,12 +145,15 @@ mod tests {
             ns_name: "".to_string(),
         };
         let result = dns::resolver::check_authority_diff(&[q], &[a]).unwrap_err();
-        assert_eq!(result, exceptions::SCloudException::SCLOUD_RESOLVER_AUTHORITY_QNAME_MISMATCH);
+        assert_eq!(
+            result,
+            exceptions::SCloudException::SCLOUD_RESOLVER_AUTHORITY_QNAME_MISMATCH
+        );
     }
 
     #[test]
     fn test_check_additionnal_diff() {
-        let q = QuestionSection{
+        let q = QuestionSection {
             q_name: "github.com".to_string(),
             q_type: dns::q_type::DNSRecordType::A,
             q_class: dns::q_class::DNSClass::IN,
@@ -163,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_check_additional_diff_err() {
-        let q = QuestionSection{
+        let q = QuestionSection {
             q_name: "github.com".to_string(),
             q_type: dns::q_type::DNSRecordType::A,
             q_class: dns::q_class::DNSClass::IN,
@@ -177,7 +186,9 @@ mod tests {
             rdata: vec![],
         };
         let result = dns::resolver::check_additional_diff(&[q], &[a]).unwrap_err();
-        assert_eq!(result, exceptions::SCloudException::SCLOUD_RESOLVER_ADDITIONNAL_QNAME_MISMATCH);
+        assert_eq!(
+            result,
+            exceptions::SCloudException::SCLOUD_RESOLVER_ADDITIONNAL_QNAME_MISMATCH
+        );
     }
-
 }

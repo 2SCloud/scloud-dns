@@ -1,18 +1,14 @@
+use crate::log_error;
+use crate::utils::logging::{LOG_SENDER, OtelLog, build_otlp_payload};
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::{Duration, Instant};
-use crate::log_error;
-use crate::utils::logging::{build_otlp_payload, OtelLog, LOG_SENDER};
 
 const CHAN_SIZE: usize = 200_000;
 const MAX_BATCH: usize = 512;
 const FLUSH_EVERY: Duration = Duration::from_secs(10);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
-async fn flush_with_retry(
-    client: &reqwest::Client,
-    url: &str,
-    buf: &mut Vec<OtelLog>,
-) {
+async fn flush_with_retry(client: &reqwest::Client, url: &str, buf: &mut Vec<OtelLog>) {
     if buf.is_empty() {
         return;
     }

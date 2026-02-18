@@ -7,8 +7,8 @@ use tokio::sync::mpsc;
 
 use crate::exceptions::SCloudException;
 use crate::utils;
-use crate::workers::{SCloudWorker, WorkerState, WorkerType};
 use crate::workers::task::{InFlightTask, SCloudWorkerTask};
+use crate::workers::{SCloudWorker, WorkerState, WorkerType};
 
 pub async fn run_dns_listener_with_socket(
     worker: Arc<SCloudWorker>,
@@ -43,7 +43,10 @@ pub async fn run_dns_listener_with_socket(
             correlation_id: None,
         };
 
-        let in_flight = InFlightTask { task, _permit: permit };
+        let in_flight = InFlightTask {
+            task,
+            _permit: permit,
+        };
 
         if tx.send(in_flight).await.is_err() {
             return Ok(());
