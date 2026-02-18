@@ -1,24 +1,28 @@
 use std::sync::Arc;
 use std::time::SystemTime;
-use tokio::sync::{mpsc};
-use bytes::{Buf, Bytes};
+
+use bytes::Bytes;
 use tokio::net::UdpSocket;
+use tokio::sync::mpsc;
+
 use crate::exceptions::SCloudException;
+use crate::utils;
 use crate::workers::{SCloudWorker, WorkerState, WorkerType};
 use crate::workers::task::{InFlightTask, SCloudWorkerTask};
-use crate::utils;
 
-pub async fn run_dns_listener(
+pub async fn run_dns_listener_with_socket(
     worker: Arc<SCloudWorker>,
-    bind_addr: &str,
+    socket: UdpSocket,
     tx: mpsc::Sender<InFlightTask>,
 ) -> Result<(), SCloudException> {
-    let socket = UdpSocket::bind(bind_addr).await.map_err(|_| SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED)?;
     let mut buf = [0u8; 65_535];
     worker.set_state(WorkerState::IDLE);
 
     loop {
-        let (len, src) = socket.recv_from(&mut buf).await.map_err(|_| SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED)?;
+        let (len, src) = socket
+            .recv_from(&mut buf)
+            .await
+            .map_err(|_| SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED)?;
 
         let permit = match worker.in_flight_sem.clone().try_acquire_owned() {
             Ok(p) => p,
@@ -39,10 +43,22 @@ pub async fn run_dns_listener(
             correlation_id: None,
         };
 
-        let in_flight = InFlightTask {task, _permit: permit };
+        let in_flight = InFlightTask { task, _permit: permit };
 
         if tx.send(in_flight).await.is_err() {
             return Ok(());
         }
     }
+}
+
+pub async fn run_dns_listener(
+    worker: Arc<SCloudWorker>,
+    bind_addr: &str,
+    tx: mpsc::Sender<InFlightTask>,
+) -> Result<(), SCloudException> {
+    let socket = UdpSocket::bind(bind_addr)
+        .await
+        .map_err(|_| SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED)?;
+
+    run_dns_listener_with_socket(worker, socket, tx).await
 }
