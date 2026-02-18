@@ -1,12 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
-    use tokio::sync::{mpsc, oneshot};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
-    use wiremock::matchers::{method, path};
     use crate::utils::logging::OtelLog;
     use crate::workers;
-
+    use std::time::Duration;
+    use tokio::sync::{mpsc, oneshot};
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     fn mk_log(i: usize) -> OtelLog {
         OtelLog {
@@ -33,8 +32,8 @@ mod tests {
 
     #[tokio::test]
     async fn flushes_on_max_batch_and_payload_contains_logs() {
-        use wiremock::{Mock, MockServer, ResponseTemplate};
         use wiremock::matchers::{method, path};
+        use wiremock::{Mock, MockServer, ResponseTemplate};
 
         let server = MockServer::start().await;
 
@@ -59,7 +58,15 @@ mod tests {
         let flush_every = Duration::from_secs(60);
 
         let handle = tokio::spawn(async move {
-            workers::types::metrics::run_otlp_logger(rx, shutdown_rx, client, &url, max_batch, flush_every).await;
+            workers::types::metrics::run_otlp_logger(
+                rx,
+                shutdown_rx,
+                client,
+                &url,
+                max_batch,
+                flush_every,
+            )
+            .await;
         });
 
         for i in 0..max_batch {
@@ -90,7 +97,6 @@ mod tests {
         assert!(msgs.contains(&"hello 4".to_string()));
     }
 
-
     #[tokio::test]
     async fn flushes_on_timer_tick_when_buffer_non_empty() {
         tokio::time::pause();
@@ -107,14 +113,25 @@ mod tests {
         let (tx, rx) = mpsc::channel::<OtelLog>(1000);
         let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
 
-        let client = reqwest::Client::builder().timeout(Duration::from_secs(2)).build().unwrap();
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(2))
+            .build()
+            .unwrap();
         let url = format!("{}/v1/logs", server.uri());
 
         let max_batch = 999usize;
         let flush_every = Duration::from_secs(10);
 
         let handle = tokio::spawn(async move {
-            workers::types::metrics::run_otlp_logger(rx, shutdown_rx, client, &url, max_batch, flush_every).await;
+            workers::types::metrics::run_otlp_logger(
+                rx,
+                shutdown_rx,
+                client,
+                &url,
+                max_batch,
+                flush_every,
+            )
+            .await;
         });
 
         tx.send(mk_log(1)).await.unwrap();
@@ -144,11 +161,22 @@ mod tests {
         let (_tx, rx) = mpsc::channel::<OtelLog>(1000);
         let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
 
-        let client = reqwest::Client::builder().timeout(Duration::from_secs(2)).build().unwrap();
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(2))
+            .build()
+            .unwrap();
         let url = format!("{}/v1/logs", server.uri());
 
         let handle = tokio::spawn(async move {
-            workers::types::metrics::run_otlp_logger(rx, shutdown_rx, client, &url, 10, Duration::from_secs(10)).await;
+            workers::types::metrics::run_otlp_logger(
+                rx,
+                shutdown_rx,
+                client,
+                &url,
+                10,
+                Duration::from_secs(10),
+            )
+            .await;
         });
 
         tokio::time::advance(Duration::from_secs(30)).await;

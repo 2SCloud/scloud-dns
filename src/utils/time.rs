@@ -18,11 +18,7 @@ pub(crate) fn civil_from_days(days: i64) -> (i32, u32, u32) {
     let d = doy - (153 * mp + 2) / 5 + 1;
     let m = mp + if mp < 10 { 3 } else { -9 };
 
-    (
-        (y + if m <= 2 { 1 } else { 0 }) as i32,
-        m as u32,
-        d as u32,
-    )
+    ((y + if m <= 2 { 1 } else { 0 }) as i32, m as u32, d as u32)
 }
 
 pub(crate) fn format_unix_timestamp(secs: u64) -> String {
@@ -45,10 +41,7 @@ pub(crate) fn format_unix_timestamp(secs: u64) -> String {
 }
 
 pub(crate) fn format_system_time(t: SystemTime) -> String {
-    let secs = t
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
+    let secs = t.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
 
     format_unix_timestamp(secs)
 }

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use std::time::{Duration, SystemTime, UNIX_EPOCH};
     use crate::utils;
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
     #[test]
     fn test_now_epoch_ms_is_nonzero_and_close_to_system_time() {
@@ -13,7 +13,11 @@ mod tests {
             .unwrap()
             .as_millis();
 
-        let diff = if sys_ms >= ms { sys_ms - ms } else { ms - sys_ms };
+        let diff = if sys_ms >= ms {
+            sys_ms - ms
+        } else {
+            ms - sys_ms
+        };
         assert!(diff <= 2_000);
     }
 
@@ -36,12 +40,18 @@ mod tests {
 
     #[test]
     fn test_format_unix_timestamp_one_day_plus_one_second() {
-        assert_eq!(utils::time::format_unix_timestamp(86_400 + 1), "01/02/1970-00:00:01");
+        assert_eq!(
+            utils::time::format_unix_timestamp(86_400 + 1),
+            "01/02/1970-00:00:01"
+        );
     }
 
     #[test]
     fn test_format_unix_timestamp_end_of_first_day() {
-        assert_eq!(utils::time::format_unix_timestamp(86_399), "01/01/1970-23:59:59");
+        assert_eq!(
+            utils::time::format_unix_timestamp(86_399),
+            "01/01/1970-23:59:59"
+        );
     }
 
     #[test]

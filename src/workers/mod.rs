@@ -1,18 +1,18 @@
 use crate::exceptions::SCloudException;
+use crate::workers::manager::StartGate;
+use crate::workers::task::InFlightTask;
+use crate::{log_error, log_info, log_sdebug, log_strace};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
-use crate::{log_error, log_info, log_sdebug, log_strace};
-use crate::workers::manager::StartGate;
-use tokio::sync::{mpsc, Mutex, MutexGuard, Semaphore};
 use std::sync::Arc;
-use crate::workers::task::InFlightTask;
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
+use tokio::sync::{Mutex, MutexGuard, Semaphore, mpsc};
 
+pub(crate) mod manager;
+pub(crate) mod queue;
 pub(crate) mod task;
 pub(crate) mod tests;
-pub(crate) mod queue;
 pub(crate) mod types;
-pub(crate) mod manager;
 
 #[allow(non_camel_case_types)]
 #[derive(Debug)]
@@ -61,7 +61,6 @@ impl SCloudWorker {
     const NEVER_APPLIED: u8 = 0xFF;
 
     pub(crate) fn new(worker_type: WorkerType) -> Result<Self, SCloudException> {
-
         Ok(Self {
             worker_id: AtomicU64::new(manager::generate_worker_id()),
             worker_type: AtomicU8::new(worker_type as u8),
@@ -89,8 +88,15 @@ impl SCloudWorker {
         })
     }
 
-    pub(crate) async fn run(self: Arc<Self>, gate: Option<Arc<StartGate>>) -> Result<(), SCloudException> {
-        log_sdebug!("Running SCloudWorker [ID: {}][TYPE: {:?}]", self.get_worker_id(), self.get_worker_type());
+    pub(crate) async fn run(
+        self: Arc<Self>,
+        gate: Option<Arc<StartGate>>,
+    ) -> Result<(), SCloudException> {
+        log_sdebug!(
+            "Running SCloudWorker [ID: {}][TYPE: {:?}]",
+            self.get_worker_id(),
+            self.get_worker_type()
+        );
         if let Some(g) = gate {
             g.done().await;
         }
@@ -154,9 +160,7 @@ impl SCloudWorker {
                 let (rx, tx) = self.get_dns_rx_tx().await?;
                 types::tcp_acceptor::run_dns_tcp_acceptor(self.clone(), rx, tx).await?;
             }
-            _ => {
-
-            }
+            _ => {}
         }
         Ok(())
     }
@@ -172,24 +176,23 @@ impl SCloudWorker {
     }
 
     #[inline]
-    pub async fn get_dns_rx_tx(&self) -> Result<
-            (mpsc::Receiver<InFlightTask>,
-            mpsc::Sender<InFlightTask>),
-            SCloudException>
-    {
-        let rx = self.dns_rx
+    pub async fn get_dns_rx_tx(
+        &self,
+    ) -> Result<(mpsc::Receiver<InFlightTask>, mpsc::Sender<InFlightTask>), SCloudException> {
+        let rx = self
+            .dns_rx
             .lock()
             .await
             .take()
             .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET);
 
-        let tx = self.dns_tx
+        let tx = self
+            .dns_tx
             .lock()
             .await
             .as_ref()
             .cloned()
             .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET);
-
 
         Ok((rx?, tx?))
     }
@@ -365,7 +368,8 @@ impl SCloudWorker {
 
     #[inline]
     pub fn set_shutdown_mode(&self, shutdown_mode: ShutdownMode) {
-        self.shutdown_mode.store(shutdown_mode as u8, Ordering::Relaxed);
+        self.shutdown_mode
+            .store(shutdown_mode as u8, Ordering::Relaxed);
     }
 
     #[inline]
@@ -428,7 +432,6 @@ impl SCloudWorker {
         self.last_task_id_lo
             .store(last_task_id_lo, Ordering::Relaxed);
     }
-
 }
 
 #[repr(u8)]
@@ -531,7 +534,7 @@ impl TryFrom<u8> for WorkerType {
 
 pub fn spawn_worker(
     worker: Arc<SCloudWorker>,
-    gate: Arc<StartGate>
+    gate: Arc<StartGate>,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         gate.wait_turn(worker.get_worker_id()).await;

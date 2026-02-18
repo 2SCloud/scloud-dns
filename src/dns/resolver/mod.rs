@@ -1,9 +1,9 @@
 pub(crate) mod stub;
 
+use crate::dns::packet::DNSPacket;
 use crate::dns::packet::additional::AdditionalSection;
 use crate::dns::packet::answer::AnswerSection;
 use crate::dns::packet::authority::AuthoritySection;
-use crate::dns::packet::DNSPacket;
 use crate::dns::packet::question::QuestionSection;
 use crate::exceptions::SCloudException;
 
@@ -68,7 +68,7 @@ pub(crate) fn check_response_diff(
 /// ```
 pub(crate) fn check_answer_diff(
     questions: &[QuestionSection],
-    answers: &[AnswerSection]
+    answers: &[AnswerSection],
 ) -> Result<(), SCloudException> {
     for record in answers.iter() {
         if !questions.iter().any(|q| record.q_name == q.q_name) {

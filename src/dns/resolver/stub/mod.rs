@@ -108,10 +108,7 @@ impl StubResolver {
                         return Err(SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_RESPONSE)?;
                     }
 
-                    if let Err(e) = check_response_diff(
-                        response.clone(),
-                        &questions
-                    ) {
+                    if let Err(e) = check_response_diff(response.clone(), &questions) {
                         return Err(e);
                     }
 

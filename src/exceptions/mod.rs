@@ -1,5 +1,5 @@
-use strum_macros::EnumIter;
 use crate::dns::q_class::DNSClass;
+use strum_macros::EnumIter;
 
 mod tests;
 
@@ -113,7 +113,6 @@ pub enum SCloudException {
 
     // LISTENER
     SCLOUD_WORKER_LISTENER_RECV_FAILED = 76,
-
     // DECODER
 }
 
@@ -190,20 +189,14 @@ impl SCloudException {
             SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE => "Unknown `q_type`.",
 
             //QCLASS
-            SCloudException::SCLOUD_QCLASS_U16_FOR_DNSCLASS_UNKNOWN => {
-                "Unknown `q_class`."
-            }
-            SCloudException::SCLOUD_QCLASS_DNSCLASS_FOR_U16_UNKNOWN => {
-                "Unknown `q_class`."
-            }
+            SCloudException::SCLOUD_QCLASS_U16_FOR_DNSCLASS_UNKNOWN => "Unknown `q_class`.",
+            SCloudException::SCLOUD_QCLASS_DNSCLASS_FOR_U16_UNKNOWN => "Unknown `q_class`.",
 
             // STUB RESOLVER
             SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_ID => {
                 "Invalid DNS ID (difference between `response.header.id` and `request_id`)."
             }
-            SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_RESPONSE => {
-                "Invalid DNS response."
-            }
+            SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_RESPONSE => "Invalid DNS response.",
             SCloudException::SCLOUD_STUB_RESOLVER_FAILED_TO_CREATE_SOCKET => {
                 "Failed to create UDP socket."
             }
@@ -233,9 +226,7 @@ impl SCloudException {
             }
 
             // ZONES
-            SCloudException::SCLOUD_ZONE_PARSER_FILE_NOT_FOUND => {
-                "Zone file not found."
-            }
+            SCloudException::SCLOUD_ZONE_PARSER_FILE_NOT_FOUND => "Zone file not found.",
             SCloudException::SCLOUD_ZONE_PARSER_FILE_EMPTY => "Zone file is empty.",
             SCloudException::SCLOUD_ZONE_PARSER_FAILED_TO_READ_ZONE_FILE => {
                 "`zone_parser()` failed to read the zone file."
@@ -245,15 +236,11 @@ impl SCloudException {
             }
 
             //CONFIG
-            SCloudException::SCLOUD_CONFIG_FILE_NOT_FOUND => {
-                "Configuration file not found."
-            }
+            SCloudException::SCLOUD_CONFIG_FILE_NOT_FOUND => "Configuration file not found.",
             SCloudException::SCLOUD_CONFIG_IMPOSSIBLE_TO_PARSE_JSON => {
                 "Error while parsing the JSON file."
             }
-            SCloudException::SCLOUD_CONFIG_MISSING_FORWARDER => {
-                "Missing forwarder."
-            }
+            SCloudException::SCLOUD_CONFIG_MISSING_FORWARDER => "Missing forwarder.",
             SCloudException::SCLOUD_CONFIG_MISSING_ADDRESS => "Missing address.",
             SCloudException::SCLOUD_CONFIG_IMPOSSIBLE_TO_PARSE_ADDR => {
                 "Error while parsing the IP address."
@@ -267,15 +254,11 @@ impl SCloudException {
             SCloudException::SCLOUD_CONFIG_INVALID_DNS_LIMITS => {
                 "Invalid DNS limits (label length, domain length, or packet size)."
             }
-            SCloudException::SCLOUD_CONFIG_INVALID_LISTENER => {
-                "Invalid listener configuration."
-            }
+            SCloudException::SCLOUD_CONFIG_INVALID_LISTENER => "Invalid listener configuration.",
             SCloudException::SCLOUD_CONFIG_DUPLICATE_LISTENER_NAME => {
                 "Duplicate listener name detected."
             }
-            SCloudException::SCLOUD_CONFIG_INVALID_LISTENER_PORT => {
-                "Invalid listener port."
-            }
+            SCloudException::SCLOUD_CONFIG_INVALID_LISTENER_PORT => "Invalid listener port.",
             SCloudException::SCLOUD_CONFIG_INVALID_LISTENER_PROTOCOLS => {
                 "Listener has no valid protocol defined."
             }
@@ -285,30 +268,20 @@ impl SCloudException {
             SCloudException::SCLOUD_CONFIG_TLS_MISSING_KEY => {
                 "TLS enabled but private key path is missing."
             }
-            SCloudException::SCLOUD_CONFIG_TLS_REQUIRES_TCP => {
-                "TLS listeners require TCP support."
-            }
+            SCloudException::SCLOUD_CONFIG_TLS_REQUIRES_TCP => "TLS listeners require TCP support.",
             SCloudException::SCLOUD_CONFIG_INVALID_DOH => {
                 "Invalid DNS-over-HTTPS (DoH) configuration."
             }
             SCloudException::SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE => {
                 "Unknown or invalid ACL reference."
             }
-            SCloudException::SCLOUD_CONFIG_INVALID_FORWARDER => {
-                "Invalid forwarder configuration."
-            }
+            SCloudException::SCLOUD_CONFIG_INVALID_FORWARDER => "Invalid forwarder configuration.",
             SCloudException::SCLOUD_CONFIG_DUPLICATE_FORWARDER_NAME => {
                 "Duplicate forwarder name detected."
             }
-            SCloudException::SCLOUD_CONFIG_INVALID_ZONE => {
-                "Invalid DNS zone configuration."
-            }
-            SCloudException::SCLOUD_CONFIG_DUPLICATE_ZONE_NAME => {
-                "Duplicate zone name detected."
-            }
-            SCloudException::SCLOUD_CONFIG_ZONE_MISSING_FILE => {
-                "Zone file path is missing."
-            }
+            SCloudException::SCLOUD_CONFIG_INVALID_ZONE => "Invalid DNS zone configuration.",
+            SCloudException::SCLOUD_CONFIG_DUPLICATE_ZONE_NAME => "Duplicate zone name detected.",
+            SCloudException::SCLOUD_CONFIG_ZONE_MISSING_FILE => "Zone file path is missing.",
             SCloudException::SCLOUD_CONFIG_SLAVE_MISSING_MASTERS => {
                 "Slave zone has no master servers defined."
             }
@@ -327,12 +300,8 @@ impl SCloudException {
             SCloudException::SCLOUD_CONFIG_PRIORITY_ON_NON_MX => {
                 "Priority field is only allowed on MX records."
             }
-            SCloudException::SCLOUD_CONFIG_INVALID_VIEW => {
-                "Invalid DNS view configuration."
-            }
-            SCloudException::SCLOUD_CONFIG_DUPLICATE_VIEW_NAME => {
-                "Duplicate view name detected."
-            }
+            SCloudException::SCLOUD_CONFIG_INVALID_VIEW => "Invalid DNS view configuration.",
+            SCloudException::SCLOUD_CONFIG_DUPLICATE_VIEW_NAME => "Duplicate view name detected.",
             SCloudException::SCLOUD_CONFIG_INVALID_DYNUPDATE => {
                 "Invalid dynamic update configuration."
             }
@@ -341,9 +310,7 @@ impl SCloudException {
             }
 
             // LOGGING
-            SCloudException::SCLOUD_LOGGING_PATH_CREATION_FAILED => {
-                "Logging path creation failed."
-            }
+            SCloudException::SCLOUD_LOGGING_PATH_CREATION_FAILED => "Logging path creation failed.",
             SCloudException::SCLOUD_LOGGING_FILE_CREATION_OR_OPENING_FAILED => {
                 "Log file creation/opening failed."
             }
@@ -352,26 +319,18 @@ impl SCloudException {
             SCloudException::SCLOUD_WORKER_FAILED_TO_SPAWN => {
                 "Failed to link the worker to the thread, and cannot spawn a worker."
             }
-            SCloudException::SCLOUD_WORKER_TX_NOT_SET => {
-                "`dns_tx` is not set for this worker."
-            }
-            SCloudException::SCLOUD_WORKER_RX_NOT_SET => {
-                "`dns_rx` is not set for this worker."
-            }
+            SCloudException::SCLOUD_WORKER_TX_NOT_SET => "`dns_tx` is not set for this worker.",
+            SCloudException::SCLOUD_WORKER_RX_NOT_SET => "`dns_rx` is not set for this worker.",
             SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED => {
                 "Listener bind just failed at 'threads::run(&self)'."
             }
             SCloudException::SCLOUD_WORKER_FAILED_TO_CREATE_DECODER => {
                 "Failed to create a decoding worker."
             }
-            SCloudException::SCLOUD_WORKER_UNKNOWN_TYPE => {
-                "Unknown worker type."
-            }
+            SCloudException::SCLOUD_WORKER_UNKNOWN_TYPE => "Unknown worker type.",
 
             // LISTENER
-            SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED => {
-                "Listener revc() failed"
-            }
+            SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED => "Listener revc() failed",
             _ => "Unknown error.",
         }
     }
