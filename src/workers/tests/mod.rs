@@ -1,3 +1,5 @@
+mod types;
+
 #[cfg(test)]
 mod tests {
     use std::any::type_name_of_val;
