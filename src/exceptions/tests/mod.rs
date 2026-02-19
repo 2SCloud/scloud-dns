@@ -62,7 +62,7 @@ mod tests {
                 17,
                 SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_COMPRESSION_FAILED,
             ),
-            (18, SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE),
+            (18, SCloudException::SCLOUD_QTYPE_U16_FOR_DNSRECORDTYPE_UNKNOWN),
             (19, SCloudException::SCLOUD_QCLASS_U16_FOR_DNSCLASS_UNKNOWN),
             (20, SCloudException::SCLOUD_QCLASS_DNSCLASS_FOR_U16_UNKNOWN),
             (21, SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_ID),
@@ -157,12 +157,13 @@ mod tests {
             (74, SCloudException::SCLOUD_WORKER_FAILED_TO_CREATE_DECODER),
             (75, SCloudException::SCLOUD_WORKER_UNKNOWN_TYPE),
             (76, SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED),
+            (77, SCloudException::SCLOUD_QTYPE_DNSRECORDTYPE_FOR_U16_UNKNOWN)
         ]
     }
 
     #[test]
     fn test_exceptions_to_str() {
-        let ex_msg_array: [&'static str; 77] = [
+        let ex_msg_array: [&'static str; 78] = [
             // HEADER SECTION
             "Buffer length is less than header length.",
             "The header is empty.",
@@ -188,10 +189,11 @@ mod tests {
             "Impossible to parse the `q_name`, pos and len are greater than buffer length.",
             "Impossible to parse the `q_name`, compression 0xC0xx failed.",
             // QTYPE
-            "Unknown `q_type`.",
+            "Unknown `q_type`, failed to find a DNSRecordType for a u16.",
+            "Unknown `q_type`, failed to find a u16 for a DNSRecordType.",
             // QCLASS
-            "Unknown `q_class`.",
-            "Unknown `q_class`.",
+            "Unknown `q_class`, failed to find a DNSClass for a u16.",
+            "Unknown `q_class`, failed to find a u16 for a DNSClass.",
             // STUB RESOLVER
             "Invalid DNS ID (difference between `response.header.id` and `request_id`).",
             "Invalid DNS response.",
@@ -286,7 +288,7 @@ mod tests {
     #[test]
     fn test_exceptions_iter_count() {
         let count = SCloudException::iter().count();
-        let expected_count = 77;
+        let expected_count = 78;
         assert_eq!(count, expected_count);
     }
 
@@ -314,7 +316,7 @@ mod tests {
 
     #[test]
     fn tryfrom_u16_to_exception_out_of_range_is_err() {
-        for &code in &[77u16, 78, 100, 1000, u16::MAX] {
+        for &code in &[78u16, 100, 1000, u16::MAX] {
             let err = SCloudException::try_from(code)
                 .expect_err(&format!("code {code}: expected Err, got Ok"));
             assert_eq!(

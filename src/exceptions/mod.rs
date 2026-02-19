@@ -38,7 +38,8 @@ pub enum SCloudException {
     SCLOUD_IMPOSSIBLE_PARSE_QNAME_COMPRESSION_FAILED = 17,
 
     // QTYPE
-    SCLOUD_QTYPE_UNKNOWN_TYPE = 18,
+    SCLOUD_QTYPE_U16_FOR_DNSRECORDTYPE_UNKNOWN = 18,
+    SCLOUD_QTYPE_DNSRECORDTYPE_FOR_U16_UNKNOWN = 77,
 
     //QCLASS
     SCLOUD_QCLASS_U16_FOR_DNSCLASS_UNKNOWN = 19,
@@ -186,11 +187,16 @@ impl SCloudException {
             }
 
             // QTYPE
-            SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE => "Unknown `q_type`.",
+            SCloudException::SCLOUD_QTYPE_U16_FOR_DNSRECORDTYPE_UNKNOWN => {
+                "Unknown `q_type`, failed to find a DNSRecordType for a u16."
+            }
+            SCloudException::SCLOUD_QTYPE_DNSRECORDTYPE_FOR_U16_UNKNOWN => {
+                "Unknown `q_type`, failed to find a u16 for a DNSRecordType."
+            }
 
             //QCLASS
-            SCloudException::SCLOUD_QCLASS_U16_FOR_DNSCLASS_UNKNOWN => "Unknown `q_class`.",
-            SCloudException::SCLOUD_QCLASS_DNSCLASS_FOR_U16_UNKNOWN => "Unknown `q_class`.",
+            SCloudException::SCLOUD_QCLASS_U16_FOR_DNSCLASS_UNKNOWN => "Unknown `q_class`, failed to find a DNSClass for a u16.",
+            SCloudException::SCLOUD_QCLASS_DNSCLASS_FOR_U16_UNKNOWN => "Unknown `q_class`, failed to find a u16 for a DNSClass.",
 
             // STUB RESOLVER
             SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_ID => {
@@ -341,27 +347,43 @@ impl TryFrom<u16> for SCloudException {
 
     fn try_from(v: u16) -> Result<Self, Self::Error> {
         match v {
+            //HEADER SECTION
             0 => Ok(SCloudException::SCLOUD_HEADER_DESERIALIZATION_FAILED),
             1 => Ok(SCloudException::SCLOUD_HEADER_BYTES_EMPTY),
+
+            // QUESTION SECTION
             2 => Ok(SCloudException::SCLOUD_QUESTION_DESERIALIZATION_FAILED),
             3 => Ok(SCloudException::SCLOUD_QUESTION_SERIALIZATION_FAILED_QNAME_TOO_LONG),
+
+            // ANSWER SECTION
             4 => Ok(SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED),
             5 => Ok(SCloudException::SCLOUD_ANSWER_DESERIALIZATION_FAILED_LABEL_TOO_LONG),
             6 => Ok(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_ANSWER_HEADER_TOO_SHORT),
             7 => Ok(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_ANSWER_RDATA_OUT_OF_BOUNDS),
+
+            // AUTHORITY SECTION
             8 => Ok(SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_RDATA_OUT_OF_BOUNDS),
             9 => Ok(SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_BUF_TOO_SHORT),
+
+            // ADDITIONAL SECTION
             10 => Ok(SCloudException::SCLOUD_ADDITIONAL_DESERIALIZATION_FAILED),
             11 => Ok(SCloudException::SCLOUD_ADDITIONAL_DESERIALIZATION_FAILED_BUF_TOO_SHORT),
             12 => Ok(SCloudException::SCLOUD_ADDITIONAL_DESERIALIZATION_FAILED_QNAME_TOO_LONG),
             13 => Ok(SCloudException::SCLOUD_ADDITIONAL_DESERIALIZATION_FAILED_RDATA_OUT_OF_BOUNDS),
+
+            // QNAME SECTION
             14 => Ok(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME),
             15 => Ok(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_GREATER_THAN_BUF),
             16 => Ok(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_AND_LEN_GREATER_THAN_BUF),
             17 => Ok(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_COMPRESSION_FAILED),
-            18 => Ok(SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE),
+
+            // ANSWER SECTION
+            18 => Ok(SCloudException::SCLOUD_QTYPE_U16_FOR_DNSRECORDTYPE_UNKNOWN),
+            77 => Ok(SCloudException::SCLOUD_QTYPE_DNSRECORDTYPE_FOR_U16_UNKNOWN),
+
             19 => Ok(SCloudException::SCLOUD_QCLASS_U16_FOR_DNSCLASS_UNKNOWN),
             20 => Ok(SCloudException::SCLOUD_QCLASS_DNSCLASS_FOR_U16_UNKNOWN),
+
             21 => Ok(SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_ID),
             22 => Ok(SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_RESPONSE),
             23 => Ok(SCloudException::SCLOUD_STUB_RESOLVER_FAILED_TO_CREATE_SOCKET),
@@ -448,7 +470,8 @@ impl TryFrom<SCloudException> for u16 {
             SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_GREATER_THAN_BUF => Ok(15),
             SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_POS_AND_LEN_GREATER_THAN_BUF => Ok(16),
             SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_COMPRESSION_FAILED => Ok(17),
-            SCloudException::SCLOUD_QTYPE_UNKNOWN_TYPE => Ok(18),
+            SCloudException::SCLOUD_QTYPE_U16_FOR_DNSRECORDTYPE_UNKNOWN => Ok(18),
+            SCloudException::SCLOUD_QTYPE_DNSRECORDTYPE_FOR_U16_UNKNOWN => Ok(77),
             SCloudException::SCLOUD_QCLASS_U16_FOR_DNSCLASS_UNKNOWN => Ok(19),
             SCloudException::SCLOUD_QCLASS_DNSCLASS_FOR_U16_UNKNOWN => Ok(20),
             SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_ID => Ok(21),
