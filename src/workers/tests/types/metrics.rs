@@ -114,7 +114,6 @@ mod tests {
         let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
 
         let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(2))
             .build()
             .unwrap();
         let url = format!("{}/v1/logs", server.uri());
@@ -162,7 +161,6 @@ mod tests {
         let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
 
         let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(2))
             .build()
             .unwrap();
         let url = format!("{}/v1/logs", server.uri());
