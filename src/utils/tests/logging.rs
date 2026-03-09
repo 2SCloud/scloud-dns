@@ -2,14 +2,14 @@
 mod tests {
     use std::fs;
     use std::path::{Path, PathBuf};
-    use std::time::Duration;
     use std::sync::Once;
+    use std::time::Duration;
     use uuid::Uuid;
 
     use crate::config::{LogFormat, LogLevel, LoggingConfig};
-    use crate::{log_info, log_sdebug, log_strace, utils};
     use crate::utils::logging::{self, OtelLog};
     use crate::utils::time;
+    use crate::{log_info, log_sdebug, log_strace, utils};
 
     static INIT: Once = Once::new();
 

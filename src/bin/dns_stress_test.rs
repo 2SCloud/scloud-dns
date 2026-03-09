@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 use tokio::net::UdpSocket;
 
@@ -64,7 +64,9 @@ async fn main() -> anyhow::Result<()> {
         let qname = qname.to_string();
 
         let h = tokio::spawn(async move {
-            let sock = UdpSocket::bind("0.0.0.0:0").await.expect("bind client socket");
+            let sock = UdpSocket::bind("0.0.0.0:0")
+                .await
+                .expect("bind client socket");
             sock.connect(target).await.expect("connect client socket");
 
             let mut id: u16 = (client_idx as u16).wrapping_mul(7919).wrapping_add(1);

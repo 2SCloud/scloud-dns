@@ -1,16 +1,16 @@
 use crate::config::Config;
-use std::path::Path;
-use std::sync::Arc;
-use tokio::sync::mpsc;
 use crate::exceptions::SCloudException;
 use crate::workers::manager::StartGate;
 use crate::workers::{SCloudWorker, WorkerType};
+use std::path::Path;
+use std::sync::Arc;
+use tokio::sync::mpsc;
 
 mod config;
 mod dns;
 mod exceptions;
-mod workers;
 mod utils;
+mod workers;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 8)]
 async fn main() -> Result<(), SCloudException> {
@@ -28,7 +28,7 @@ async fn main() -> Result<(), SCloudException> {
         Arc::new(SCloudWorker::new(WorkerType::DECODER)?),
         Arc::new(SCloudWorker::new(WorkerType::QUERY_DISPATCHER)?),
         Arc::new(SCloudWorker::new(WorkerType::RESOLVER)?),
-        Arc::new(SCloudWorker::new(WorkerType::METRICS)?)
+        Arc::new(SCloudWorker::new(WorkerType::METRICS)?),
     ];
 
     // TODO: should automatically detect worker's type and create channel between them.
