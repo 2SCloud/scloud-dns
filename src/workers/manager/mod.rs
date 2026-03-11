@@ -1,3 +1,5 @@
+mod channels_generation;
+
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
 use tokio::sync::{Mutex as TMutex, Notify};
