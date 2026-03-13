@@ -18,27 +18,17 @@ async fn main() -> Result<(), SCloudException> {
     let gate = Arc::new(StartGate::new(1));
     utils::logging::init(config.logging.clone())?;
 
-    let (tx_l2d, rx_l2d) = mpsc::channel(1024);
-    let (tx_d2qd, rx_d2qd) = mpsc::channel(1024);
-    let (tx_qd2r, rx_qd2r) = mpsc::channel(1024);
-    let (tx_r2s, rx_r2s) = mpsc::channel(1024);
-
     let mut workers: Vec<Arc<SCloudWorker>> = vec![
         Arc::new(SCloudWorker::new(WorkerType::LISTENER)?),
+        Arc::new(SCloudWorker::new(WorkerType::LISTENER)?),
+        Arc::new(SCloudWorker::new(WorkerType::LISTENER)?),
         Arc::new(SCloudWorker::new(WorkerType::DECODER)?),
-        Arc::new(SCloudWorker::new(WorkerType::QUERY_DISPATCHER)?),
-        Arc::new(SCloudWorker::new(WorkerType::RESOLVER)?),
-        Arc::new(SCloudWorker::new(WorkerType::METRICS)?),
+        Arc::new(SCloudWorker::new(WorkerType::DECODER)?),
+        Arc::new(SCloudWorker::new(WorkerType::DECODER)?),
+        Arc::new(SCloudWorker::new(WorkerType::DECODER)?),
     ];
 
-    // TODO: should automatically detect worker's type and create channel between them.
-    workers[0].set_dns_tx(tx_l2d).await;
-    workers[1].set_dns_rx(rx_l2d).await;
-    workers[1].set_dns_tx(tx_d2qd).await;
-    workers[2].set_dns_rx(rx_d2qd).await;
-    workers[2].set_dns_tx(tx_qd2r).await;
-    workers[3].set_dns_rx(rx_qd2r).await;
-    workers[3].set_dns_tx(tx_r2s).await;
+    workers::manager::channels_generation::generate_channels(workers.clone()).await;
 
     workers.sort_by_key(|w| w.get_worker_id());
 
