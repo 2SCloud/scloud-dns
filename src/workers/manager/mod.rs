@@ -1,4 +1,4 @@
-mod channels_generation;
+pub(crate) mod channels_generation;
 
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
