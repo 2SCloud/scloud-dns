@@ -25,9 +25,9 @@ pub(crate) async fn generate_channels(workers: Vec<Arc<SCloudWorker>>) /* -> Has
         wl.entry(key).or_insert_with(Vec::new).push(Arc::clone(&w));
     }
 
-    let listeners = wl.get("listener").unwrap();
-    let decoder = wl.get("listener").unwrap();
-    let query_dispatcher = wl.get("query-dispatcher").unwrap();
+    let listeners = wl.get("listener").unwrap_or(vec![]);
+    let decoder = wl.get("listener").unwrap_or(vec![]);
+    let query_dispatcher = wl.get("query-dispatcher").unwrap_or(vec![]);
 
     for l in listeners {
         l.set_dns_rx(mpsc::channel(1024).1).await;
