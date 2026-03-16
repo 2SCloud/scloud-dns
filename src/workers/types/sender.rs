@@ -6,11 +6,13 @@ use tokio::sync::mpsc;
 
 pub async fn run_dns_sender(
     worker: Arc<SCloudWorker>,
-    mut rx: mpsc::Receiver<InFlightTask>,
+    mut rx: Vec<mpsc::Receiver<InFlightTask>>,
 ) -> Result<(), SCloudException> {
     loop {
-        while let Some(mut msg) = rx.recv().await {
-
+        for rx_channel in rx.iter_mut() {
+            while let Some(msg) = rx_channel.recv().await {
+                // need to send back to the user in task::SCloudWorkerTask.for_who
+            }
         }
     }
 }

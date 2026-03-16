@@ -13,7 +13,8 @@ use crate::workers::{SCloudWorker, WorkerState, WorkerType};
 pub async fn run_dns_listener_with_socket(
     worker: Arc<SCloudWorker>,
     socket: UdpSocket,
-    tx: mpsc::Sender<InFlightTask>,
+    rx: Vec<mpsc::Receiver<InFlightTask>>,
+    tx: Vec<mpsc::Sender<InFlightTask>>,
 ) -> Result<(), SCloudException> {
     let mut buf = [0u8; 65_535];
     worker.set_state(WorkerState::IDLE);
@@ -48,8 +49,24 @@ pub async fn run_dns_listener_with_socket(
             _permit: permit,
         };
 
-        if tx.send(in_flight).await.is_err() {
-            return Ok(());
+        let mut current = Some(in_flight);
+
+        for tx_channel in tx.iter() {
+            match tx_channel.try_send(current.take().unwrap()) {
+                Ok(_) => break,
+                Err(mpsc::error::TrySendError::Full(returned)) => {
+                    current = Some(returned);
+                }
+                Err(mpsc::error::TrySendError::Closed(_)) => {
+                    return Ok(());
+                }
+            }
+        }
+
+        if let Some(unsent) = current {
+            if tx[0].send(unsent).await.is_err() {
+                return Ok(());
+            }
         }
     }
 }
@@ -57,11 +74,11 @@ pub async fn run_dns_listener_with_socket(
 pub async fn run_dns_listener(
     worker: Arc<SCloudWorker>,
     bind_addr: &str,
-    tx: mpsc::Sender<InFlightTask>,
+    tx: Vec<mpsc::Sender<InFlightTask>>,
 ) -> Result<(), SCloudException> {
     let socket = UdpSocket::bind(bind_addr)
         .await
         .map_err(|_| SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED)?;
 
-    run_dns_listener_with_socket(worker, socket, tx).await
+    run_dns_listener_with_socket(worker, socket, vec![], tx).await
 }

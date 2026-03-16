@@ -38,7 +38,7 @@ mod tests {
 
         let worker2 = worker.clone();
         let listener = tokio::spawn(async move {
-            workers::types::listener::run_dns_listener_with_socket(worker2, server, tx).await
+            workers::types::listener::run_dns_listener_with_socket(worker2, server, vec![], vec![tx]).await
         });
 
         let client = UdpSocket::bind("127.0.0.1:0").await.unwrap();
@@ -47,8 +47,8 @@ mod tests {
 
         let in_flight = timeout(Duration::from_millis(500), rx.recv())
             .await
-            .expect("timeout en attendant la tâche")
-            .expect("channel fermé");
+            .expect("timeout while waiting for the task")
+            .expect("closed channel");
 
         assert_eq!(in_flight.task.for_type, workers::WorkerType::LISTENER);
         assert_eq!(in_flight.task.payload.as_ref(), payload);
@@ -74,18 +74,18 @@ mod tests {
 
         let worker2 = worker.clone();
         let listener = tokio::spawn(async move {
-            workers::types::listener::run_dns_listener_with_socket(worker2, server, tx).await
+            workers::types::listener::run_dns_listener_with_socket(worker2, server, vec![], vec![tx]).await
         });
 
         let client = UdpSocket::bind("127.0.0.1:0").await.unwrap();
         client.send_to(b"abc", server_addr).await.unwrap();
 
         match timeout(Duration::from_millis(200), rx.recv()).await {
-            Err(_) => {} // OK
+            Err(_) => {}
             Ok(Some(_)) => panic!(
-                "on ne devait pas recevoir de tâche (permit indisponible), mais une tâche est arrivée"
+                "should not have received a task (permit unavailable), but a task arrived"
             ),
-            Ok(None) => panic!("le channel s'est fermé (listener mort / tx drop) : test invalide"),
+            Ok(None) => panic!("channel closed (listener dead / tx dropped): invalid test"),
         }
 
         listener.abort();
@@ -102,7 +102,7 @@ mod tests {
 
         let worker2 = worker.clone();
         let handle = tokio::spawn(async move {
-            workers::types::listener::run_dns_listener_with_socket(worker2, server, tx).await
+            workers::types::listener::run_dns_listener_with_socket(worker2, server, vec![], vec![tx]).await
         });
 
         let client = UdpSocket::bind("127.0.0.1:0").await.unwrap();
@@ -110,10 +110,10 @@ mod tests {
 
         let res = timeout(Duration::from_millis(500), handle)
             .await
-            .expect("timeout: le listener n'a pas terminé");
+            .expect("timeout: listener did not terminate");
 
         let out = res.expect("task panicked");
-        assert!(out.is_ok(), "attendu Ok(()), obtenu: {:?}", out);
+        assert!(out.is_ok(), "expected Ok(()), got: {:?}", out);
     }
 
     #[tokio::test]
@@ -122,7 +122,7 @@ mod tests {
         let (tx, _rx) = mpsc::channel::<workers::task::InFlightTask>(1);
 
         let res =
-            workers::types::listener::run_dns_listener(worker, "256.256.256.256:53", tx).await;
+            workers::types::listener::run_dns_listener(worker, "256.256.256.256:53", vec![tx]).await;
         assert_eq!(
             res,
             Err(exceptions::SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED)

@@ -88,7 +88,7 @@ impl SCloudWorker {
         })
     }
 
-    pub(crate) async fn run(
+    pub async fn run(
         self: Arc<Self>,
         gate: Option<Arc<StartGate>>,
     ) -> Result<(), SCloudException> {
@@ -97,6 +97,7 @@ impl SCloudWorker {
             self.get_worker_id(),
             self.get_worker_type()
         );
+
         if let Some(g) = gate {
             g.done().await;
         }
@@ -104,52 +105,51 @@ impl SCloudWorker {
             WorkerType::LISTENER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let tx = self.get_dns_tx().await?;
-                types::listener::run_dns_listener(self, "0.0.0.0:5353", tx).await?;
+                types::listener::run_dns_listener(self, "0.0.0.0:5353", vec![tx]).await?;
             }
             WorkerType::DECODER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::decoder::run_dns_decoder(self.clone(), rx, tx).await?;
+                types::decoder::run_dns_decoder(self.clone(), vec![rx], vec![tx]).await?;
             }
             WorkerType::QUERY_DISPATCHER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::query_dispatcher::run_dns_query_dispatcher(self.clone(), rx, tx).await?;
+                types::query_dispatcher::run_dns_query_dispatcher(self.clone(), vec![rx], vec![tx]).await?;
             }
             WorkerType::CACHE_LOOKUP => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::cache_lookup::run_dns_cache_lookup(self.clone(), rx, tx).await?;
+                types::cache_lookup::run_dns_cache_lookup(self.clone(), vec![rx], vec![tx]).await?;
             }
             WorkerType::ZONE_MANAGER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::zone_manager::run_dns_zone_manager(self.clone(), rx, tx).await?;
+                types::zone_manager::run_dns_zone_manager(self.clone(), vec![rx], vec![tx]).await?;
             }
             WorkerType::RESOLVER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::resolver::run_dns_resolver(self.clone(), rx, tx).await?;
+                types::resolver::run_dns_resolver(self.clone(), vec![rx], vec![tx]).await?;
             }
             WorkerType::CACHE_WRITER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::cache_writer::run_dns_cache_writer(self.clone(), rx, tx).await?;
+                types::cache_writer::run_dns_cache_writer(self.clone(), vec![rx], vec![tx]).await?;
             }
             WorkerType::ENCODER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::encoder::run_dns_encoder(self.clone(), rx, tx).await?;
+                types::encoder::run_dns_encoder(self.clone(), vec![rx], vec![tx]).await?;
             }
             WorkerType::SENDER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let rx = self.get_dns_rx().await?;
-                types::sender::run_dns_sender(self.clone(), rx).await?;
+                types::sender::run_dns_sender(self.clone(), vec![rx]).await?;
             }
             WorkerType::CACHE_JANITOR => {
                 self.clone().set_state(WorkerState::IDLE);
-                let rx = self.get_dns_rx().await?;
-                types::cache_janitor::run_dns_cache_janitor(self.clone(), rx).await?;
+                types::cache_janitor::run_dns_cache_janitor(self.clone()).await?;
             }
             WorkerType::METRICS => {
                 self.clone().set_state(WorkerState::IDLE);
@@ -158,7 +158,7 @@ impl SCloudWorker {
             WorkerType::TCP_ACCEPTOR => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::tcp_acceptor::run_dns_tcp_acceptor(self.clone(), rx, tx).await?;
+                types::tcp_acceptor::run_dns_tcp_acceptor(self.clone(), vec![rx], vec![tx]).await?;
             }
             _ => {}
         }
