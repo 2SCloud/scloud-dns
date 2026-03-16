@@ -437,19 +437,6 @@ impl SCloudWorker {
 #[repr(u8)]
 #[allow(unused)]
 #[allow(non_camel_case_types)]
-#[derive(Debug, PartialEq)]
-pub(crate) enum WorkerState {
-    INIT = 0,
-    IDLE = 1,
-    BUSY = 2,
-    PAUSED = 3,
-    STOPPING = 4,
-    STOPPED = 5,
-}
-
-#[repr(u8)]
-#[allow(unused)]
-#[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub enum WorkerType {
     NONE = 99,
@@ -491,6 +478,19 @@ impl TryFrom<u8> for WorkerType {
             _ => return Err(()),
         })
     }
+}
+
+#[repr(u8)]
+#[allow(unused)]
+#[allow(non_camel_case_types)]
+#[derive(Debug, PartialEq)]
+pub(crate) enum WorkerState {
+    INIT = 0,
+    IDLE = 1,
+    BUSY = 2,
+    PAUSED = 3,
+    STOPPING = 4,
+    STOPPED = 5,
 }
 
 impl TryFrom<u8> for WorkerState {
