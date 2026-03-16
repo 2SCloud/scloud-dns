@@ -143,8 +143,8 @@ impl SCloudWorker {
             }
             WorkerType::SENDER => {
                 self.clone().set_state(WorkerState::IDLE);
-                let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::sender::run_dns_sender(self.clone(), rx, tx).await?;
+                let rx = self.get_dns_rx().await?;
+                types::sender::run_dns_sender(self.clone(), rx).await?;
             }
             WorkerType::CACHE_JANITOR => {
                 self.clone().set_state(WorkerState::IDLE);
