@@ -119,10 +119,10 @@ mod tests {
     #[tokio::test]
     async fn listener_bind_failure_returns_expected_error() {
         let worker = test_worker(10);
-        let (tx, _rx) = mpsc::channel::<workers::task::InFlightTask>(1);
+        let (tx, rx) = mpsc::channel::<workers::task::InFlightTask>(1);
 
         let res =
-            workers::types::listener::run_dns_listener(worker, "256.256.256.256:53", vec![tx]).await;
+            workers::types::listener::run_dns_listener(worker, "256.256.256.256:53", vec![rx], vec![tx]).await;
         assert_eq!(
             res,
             Err(exceptions::SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED)

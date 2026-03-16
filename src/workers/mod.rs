@@ -22,8 +22,8 @@ pub(crate) struct SCloudWorker {
     pub(crate) worker_type: AtomicU8,
 
     // CHANNEL
-    pub(crate) dns_tx: Mutex<Option<mpsc::Sender<InFlightTask>>>,
-    pub(crate) dns_rx: Mutex<Option<mpsc::Receiver<InFlightTask>>>,
+    pub(crate) dns_tx: Mutex<Vec<mpsc::Sender<InFlightTask>>>,
+    pub(crate) dns_rx: Mutex<Vec<mpsc::Receiver<InFlightTask>>>,
 
     // RESOURCES/LIMITS
     pub(crate) stack_size_bytes: AtomicUsize,
@@ -64,8 +64,8 @@ impl SCloudWorker {
         Ok(Self {
             worker_id: AtomicU64::new(manager::generate_worker_id()),
             worker_type: AtomicU8::new(worker_type as u8),
-            dns_tx: Mutex::new(None),
-            dns_rx: Mutex::new(None),
+            dns_tx: Mutex::new(Vec::new()),
+            dns_rx: Mutex::new(Vec::new()),
             stack_size_bytes: AtomicUsize::new(2 * 1024 * 1024),
             buffer_budget_bytes: AtomicUsize::new(4 * 1024 * 1024),
             max_stack_size_bytes: AtomicUsize::new(32 * 1024 * 1024),
@@ -105,47 +105,48 @@ impl SCloudWorker {
             WorkerType::LISTENER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let tx = self.get_dns_tx().await?;
-                types::listener::run_dns_listener(self, "0.0.0.0:5353", vec![tx]).await?;
+                let rx = self.get_dns_rx().await?;
+                types::listener::run_dns_listener(self, "0.0.0.0:5353", rx, tx).await?;
             }
             WorkerType::DECODER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::decoder::run_dns_decoder(self.clone(), vec![rx], vec![tx]).await?;
+                types::decoder::run_dns_decoder(self.clone(), rx, tx).await?;
             }
             WorkerType::QUERY_DISPATCHER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::query_dispatcher::run_dns_query_dispatcher(self.clone(), vec![rx], vec![tx]).await?;
+                types::query_dispatcher::run_dns_query_dispatcher(self.clone(), rx, tx).await?;
             }
             WorkerType::CACHE_LOOKUP => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::cache_lookup::run_dns_cache_lookup(self.clone(), vec![rx], vec![tx]).await?;
+                types::cache_lookup::run_dns_cache_lookup(self.clone(), rx, tx).await?;
             }
             WorkerType::ZONE_MANAGER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::zone_manager::run_dns_zone_manager(self.clone(), vec![rx], vec![tx]).await?;
+                types::zone_manager::run_dns_zone_manager(self.clone(), rx, tx).await?;
             }
             WorkerType::RESOLVER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::resolver::run_dns_resolver(self.clone(), vec![rx], vec![tx]).await?;
+                types::resolver::run_dns_resolver(self.clone(), rx, tx).await?;
             }
             WorkerType::CACHE_WRITER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::cache_writer::run_dns_cache_writer(self.clone(), vec![rx], vec![tx]).await?;
+                types::cache_writer::run_dns_cache_writer(self.clone(), rx, tx).await?;
             }
             WorkerType::ENCODER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::encoder::run_dns_encoder(self.clone(), vec![rx], vec![tx]).await?;
+                types::encoder::run_dns_encoder(self.clone(), rx, tx).await?;
             }
             WorkerType::SENDER => {
                 self.clone().set_state(WorkerState::IDLE);
                 let rx = self.get_dns_rx().await?;
-                types::sender::run_dns_sender(self.clone(), vec![rx]).await?;
+                types::sender::run_dns_sender(self.clone(), rx).await?;
             }
             WorkerType::CACHE_JANITOR => {
                 self.clone().set_state(WorkerState::IDLE);
@@ -158,7 +159,7 @@ impl SCloudWorker {
             WorkerType::TCP_ACCEPTOR => {
                 self.clone().set_state(WorkerState::IDLE);
                 let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::tcp_acceptor::run_dns_tcp_acceptor(self.clone(), vec![rx], vec![tx]).await?;
+                types::tcp_acceptor::run_dns_tcp_acceptor(self.clone(), rx, tx).await?;
             }
             _ => {}
         }
@@ -176,44 +177,36 @@ impl SCloudWorker {
     }
 
     #[inline]
-    pub async fn get_dns_rx_tx(
-        &self,
-    ) -> Result<(mpsc::Receiver<InFlightTask>, mpsc::Sender<InFlightTask>), SCloudException> {
-        let rx = self
-            .dns_rx
-            .lock()
-            .await
-            .take()
-            .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET);
-
-        let tx = self
-            .dns_tx
-            .lock()
-            .await
-            .as_ref()
-            .cloned()
-            .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET);
-
-        Ok((rx?, tx?))
+    pub async fn push_dns_rx(&self, rx: mpsc::Receiver<InFlightTask>) {
+        self.dns_rx.lock().await.push(rx);
     }
 
     #[inline]
-    pub async fn get_dns_rx(&self) -> Result<mpsc::Receiver<InFlightTask>, SCloudException> {
-        self.dns_rx
-            .lock()
-            .await
-            .take()
-            .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET)
+    pub async fn push_dns_tx_many(&self, txs: Vec<mpsc::Sender<InFlightTask>>) {
+        self.dns_tx.lock().await.extend(txs);
     }
 
     #[inline]
-    pub async fn get_dns_tx(&self) -> Result<mpsc::Sender<InFlightTask>, SCloudException> {
-        self.dns_tx
-            .lock()
-            .await
-            .as_ref()
-            .cloned()
-            .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET)
+    pub async fn get_dns_rx_tx(&self) -> Result<(Vec<mpsc::Receiver<InFlightTask>>, Vec<mpsc::Sender<InFlightTask>>), SCloudException> {
+        Ok((self.get_dns_rx().await?, self.get_dns_tx().await?))
+    }
+
+    #[inline]
+    pub async fn get_dns_tx(&self) -> Result<Vec<mpsc::Sender<InFlightTask>>, SCloudException> {
+        let mut guard = self.dns_tx.lock().await;
+        if guard.is_empty() {
+            return Err(SCloudException::SCLOUD_WORKER_TX_NOT_SET);
+        }
+        Ok(std::mem::take(&mut *guard))
+    }
+
+    #[inline]
+    pub async fn get_dns_rx(&self) -> Result<Vec<mpsc::Receiver<InFlightTask>>, SCloudException> {
+        let mut guard = self.dns_rx.lock().await;
+        if guard.is_empty() {
+            return Err(SCloudException::SCLOUD_WORKER_RX_NOT_SET);
+        }
+        Ok(std::mem::take(&mut *guard))
     }
 
     #[inline]
@@ -323,12 +316,12 @@ impl SCloudWorker {
 
     #[inline]
     pub async fn set_dns_tx(&self, tx: mpsc::Sender<InFlightTask>) {
-        *self.dns_tx.lock().await = Some(tx);
+        self.dns_tx.lock().await.push(tx);
     }
 
     #[inline]
     pub async fn set_dns_rx(&self, rx: mpsc::Receiver<InFlightTask>) {
-        *self.dns_rx.lock().await = Some(rx);
+        self.dns_rx.lock().await.push(rx);
     }
 
     #[inline]

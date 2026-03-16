@@ -79,7 +79,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_tx.lock().await = Some(tx);
+        w.dns_tx.lock().await.push(tx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -94,7 +94,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_rx.lock().await = Some(rx);
+        w.dns_rx.lock().await.push(rx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -110,7 +110,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_tx.lock().await = Some(tx);
+        w.dns_tx.lock().await.push(tx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -126,7 +126,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_rx.lock().await = Some(rx);
+        w.dns_rx.lock().await.push(rx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -141,7 +141,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_tx.lock().await = Some(tx);
+        w.dns_tx.lock().await.push(tx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -156,7 +156,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_rx.lock().await = Some(rx);
+        w.dns_rx.lock().await.push(rx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -171,7 +171,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_tx.lock().await = Some(tx);
+        w.dns_tx.lock().await.push(tx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -186,7 +186,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_rx.lock().await = Some(rx);
+        w.dns_rx.lock().await.push(rx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -201,7 +201,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_tx.lock().await = Some(tx);
+        w.dns_tx.lock().await.push(tx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -216,7 +216,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_rx.lock().await = Some(rx);
+        w.dns_rx.lock().await.push(rx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -231,7 +231,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_tx.lock().await = Some(tx);
+        w.dns_tx.lock().await.push(tx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -246,7 +246,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_rx.lock().await = Some(rx);
+        w.dns_rx.lock().await.push(rx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -261,7 +261,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_tx.lock().await = Some(tx);
+        w.dns_tx.lock().await.push(tx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -276,7 +276,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_rx.lock().await = Some(rx);
+        w.dns_rx.lock().await.push(rx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -289,24 +289,6 @@ mod tests {
     async fn test_run_sender_fails_if_rx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::SENDER).unwrap());
         let gate = Arc::new(StartGate::new(1));
-
-        let (tx, _) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_tx.lock().await = Some(tx);
-
-        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
-        assert!(matches!(
-            err,
-            exceptions::SCloudException::SCLOUD_WORKER_RX_NOT_SET
-        ));
-    }
-
-    #[tokio::test]
-    async fn test_run_cache_janitor_fails_if_rx_not_set() {
-        let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::SENDER).unwrap());
-        let gate = Arc::new(StartGate::new(1));
-
-        let (tx, _) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_tx.lock().await = Some(tx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -321,7 +303,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (tx, _) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_tx.lock().await = Some(tx);
+        w.dns_tx.lock().await.push(tx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -336,7 +318,7 @@ mod tests {
         let gate = Arc::new(StartGate::new(1));
 
         let (_, rx) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_rx.lock().await = Some(rx);
+        w.dns_rx.lock().await.push(rx);
 
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
@@ -363,39 +345,37 @@ mod tests {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::TCP_ACCEPTOR).unwrap());
 
         let (tx0, rx0) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_rx.lock().await = Some(rx0);
-        *w.dns_tx.lock().await = Some(tx0);
+        w.dns_rx.lock().await.push(rx0);
+        w.dns_tx.lock().await.push(tx0);
 
         let (rx, tx) = w.get_dns_rx_tx().await.expect("should return rx+tx");
 
-        assert!(w.dns_rx.lock().await.is_none());
-        assert!(w.dns_tx.lock().await.is_some());
+        assert!(w.dns_rx.lock().await.is_empty());
+        assert!(w.dns_tx.lock().await.is_empty());
     }
 
     #[tokio::test]
     async fn test_get_dns_rx() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::TCP_ACCEPTOR).unwrap());
 
-        let (tx0, rx0) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_rx.lock().await = Some(rx0);
-        *w.dns_tx.lock().await = Some(tx0);
+        let (_, rx0) = mpsc::channel::<InFlightTask>(8);
+        w.dns_rx.lock().await.push(rx0);
 
         let rx = w.get_dns_rx().await.expect("should return rx");
 
-        assert!(w.dns_rx.lock().await.is_none());
+        assert!(w.dns_rx.lock().await.is_empty());
     }
 
     #[tokio::test]
     async fn test_get_dns_tx() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::TCP_ACCEPTOR).unwrap());
 
-        let (tx0, rx0) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_rx.lock().await = Some(rx0);
-        *w.dns_tx.lock().await = Some(tx0);
+        let (tx0, _) = mpsc::channel::<InFlightTask>(8);
+        w.dns_tx.lock().await.push(tx0);
 
         let tx = w.get_dns_tx().await.expect("should return tx");
 
-        assert!(w.dns_tx.lock().await.is_some());
+        assert!(w.dns_tx.lock().await.is_empty());
     }
 
     #[test]
@@ -555,7 +535,7 @@ mod tests {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::TCP_ACCEPTOR).unwrap());
         let (tx0, _) = mpsc::channel::<InFlightTask>(8);
         w.set_dns_tx(tx0).await;
-        assert!(w.dns_tx.lock().await.is_some())
+        assert!(!w.dns_tx.lock().await.is_empty());
     }
 
     #[tokio::test]
@@ -563,7 +543,7 @@ mod tests {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::TCP_ACCEPTOR).unwrap());
         let (_, rx0) = mpsc::channel::<InFlightTask>(8);
         w.set_dns_rx(rx0).await;
-        assert!(w.dns_rx.lock().await.is_some());
+        assert!(!w.dns_rx.lock().await.is_empty());
     }
 
     #[test]
