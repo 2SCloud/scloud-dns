@@ -447,45 +447,6 @@ pub(crate) enum WorkerState {
     STOPPED = 5,
 }
 
-impl TryFrom<u8> for WorkerState {
-    type Error = ();
-
-    fn try_from(v: u8) -> Result<Self, Self::Error> {
-        Ok(match v {
-            0 => WorkerState::INIT,
-            1 => WorkerState::IDLE,
-            2 => WorkerState::BUSY,
-            3 => WorkerState::PAUSED,
-            4 => WorkerState::STOPPING,
-            5 => WorkerState::STOPPED,
-            // TODO: return an SCloudException
-            _ => return Err(()),
-        })
-    }
-}
-
-#[repr(u8)]
-#[allow(unused)]
-#[allow(non_camel_case_types)]
-#[derive(Debug, PartialEq)]
-pub(crate) enum ShutdownMode {
-    GRACEFUL = 0,
-    IMMEDIATE = 1,
-}
-
-impl TryFrom<u8> for ShutdownMode {
-    type Error = ();
-
-    fn try_from(v: u8) -> Result<Self, Self::Error> {
-        Ok(match v {
-            0 => ShutdownMode::GRACEFUL,
-            1 => ShutdownMode::IMMEDIATE,
-            // TODO: return an SCloudException
-            _ => return Err(()),
-        })
-    }
-}
-
 #[repr(u8)]
 #[allow(unused)]
 #[allow(non_camel_case_types)]
@@ -526,6 +487,45 @@ impl TryFrom<u8> for WorkerType {
             10 => WorkerType::METRICS,
             11 => WorkerType::TCP_ACCEPTOR,
             99 => WorkerType::NONE,
+            // TODO: return an SCloudException
+            _ => return Err(()),
+        })
+    }
+}
+
+impl TryFrom<u8> for WorkerState {
+    type Error = ();
+
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        Ok(match v {
+            0 => WorkerState::INIT,
+            1 => WorkerState::IDLE,
+            2 => WorkerState::BUSY,
+            3 => WorkerState::PAUSED,
+            4 => WorkerState::STOPPING,
+            5 => WorkerState::STOPPED,
+            // TODO: return an SCloudException
+            _ => return Err(()),
+        })
+    }
+}
+
+#[repr(u8)]
+#[allow(unused)]
+#[allow(non_camel_case_types)]
+#[derive(Debug, PartialEq)]
+pub(crate) enum ShutdownMode {
+    GRACEFUL = 0,
+    IMMEDIATE = 1,
+}
+
+impl TryFrom<u8> for ShutdownMode {
+    type Error = ();
+
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        Ok(match v {
+            0 => ShutdownMode::GRACEFUL,
+            1 => ShutdownMode::IMMEDIATE,
             // TODO: return an SCloudException
             _ => return Err(()),
         })
