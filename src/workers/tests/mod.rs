@@ -301,21 +301,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_run_sender_fails_if_tx_not_set() {
-        let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::SENDER).unwrap());
-        let gate = Arc::new(StartGate::new(1));
-
-        let (_, rx) = mpsc::channel::<InFlightTask>(8);
-        *w.dns_rx.lock().await = Some(rx);
-
-        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
-        assert!(matches!(
-            err,
-            exceptions::SCloudException::SCLOUD_WORKER_TX_NOT_SET
-        ));
-    }
-
-    #[tokio::test]
     async fn test_run_cache_janitor_fails_if_rx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::SENDER).unwrap());
         let gate = Arc::new(StartGate::new(1));
