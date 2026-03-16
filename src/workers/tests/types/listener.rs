@@ -38,7 +38,13 @@ mod tests {
 
         let worker2 = worker.clone();
         let listener = tokio::spawn(async move {
-            workers::types::listener::run_dns_listener_with_socket(worker2, server, vec![], vec![tx]).await
+            workers::types::listener::run_dns_listener_with_socket(
+                worker2,
+                server,
+                vec![],
+                vec![tx],
+            )
+            .await
         });
 
         let client = UdpSocket::bind("127.0.0.1:0").await.unwrap();
@@ -74,7 +80,13 @@ mod tests {
 
         let worker2 = worker.clone();
         let listener = tokio::spawn(async move {
-            workers::types::listener::run_dns_listener_with_socket(worker2, server, vec![], vec![tx]).await
+            workers::types::listener::run_dns_listener_with_socket(
+                worker2,
+                server,
+                vec![],
+                vec![tx],
+            )
+            .await
         });
 
         let client = UdpSocket::bind("127.0.0.1:0").await.unwrap();
@@ -82,9 +94,9 @@ mod tests {
 
         match timeout(Duration::from_millis(200), rx.recv()).await {
             Err(_) => {}
-            Ok(Some(_)) => panic!(
-                "should not have received a task (permit unavailable), but a task arrived"
-            ),
+            Ok(Some(_)) => {
+                panic!("should not have received a task (permit unavailable), but a task arrived")
+            }
             Ok(None) => panic!("channel closed (listener dead / tx dropped): invalid test"),
         }
 
@@ -102,7 +114,13 @@ mod tests {
 
         let worker2 = worker.clone();
         let handle = tokio::spawn(async move {
-            workers::types::listener::run_dns_listener_with_socket(worker2, server, vec![], vec![tx]).await
+            workers::types::listener::run_dns_listener_with_socket(
+                worker2,
+                server,
+                vec![],
+                vec![tx],
+            )
+            .await
         });
 
         let client = UdpSocket::bind("127.0.0.1:0").await.unwrap();
@@ -121,8 +139,13 @@ mod tests {
         let worker = test_worker(10);
         let (tx, rx) = mpsc::channel::<workers::task::InFlightTask>(1);
 
-        let res =
-            workers::types::listener::run_dns_listener(worker, "256.256.256.256:53", vec![rx], vec![tx]).await;
+        let res = workers::types::listener::run_dns_listener(
+            worker,
+            "256.256.256.256:53",
+            vec![rx],
+            vec![tx],
+        )
+        .await;
         assert_eq!(
             res,
             Err(exceptions::SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED)

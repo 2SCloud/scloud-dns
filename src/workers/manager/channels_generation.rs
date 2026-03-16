@@ -1,26 +1,28 @@
+use crate::exceptions::SCloudException;
+use crate::workers::{SCloudWorker, WorkerType};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use crate::exceptions::SCloudException;
-use crate::workers::{SCloudWorker, WorkerType};
 
-pub(crate) async fn generate_channels(workers: Vec<Arc<SCloudWorker>>) -> Result<(), SCloudException> {
+pub(crate) async fn generate_channels(
+    workers: Vec<Arc<SCloudWorker>>,
+) -> Result<(), SCloudException> {
     let mut wl: HashMap<&str, Vec<Arc<SCloudWorker>>> = HashMap::new();
     for w in workers {
         let key = match &w.get_worker_type() {
-            WorkerType::LISTENER         => "listener",
-            WorkerType::DECODER          => "decoder",
+            WorkerType::LISTENER => "listener",
+            WorkerType::DECODER => "decoder",
             WorkerType::QUERY_DISPATCHER => "query-dispatcher",
-            WorkerType::CACHE_LOOKUP     => "cache-lookup",
-            WorkerType::ZONE_MANAGER     => "zone-manager",
-            WorkerType::RESOLVER         => "resolver",
-            WorkerType::CACHE_WRITER     => "cache-writer",
-            WorkerType::ENCODER          => "encoder",
-            WorkerType::SENDER           => "sender",
-            WorkerType::CACHE_JANITOR    => "cache-janitor",
-            WorkerType::METRICS          => "metrics",
-            WorkerType::TCP_ACCEPTOR     => "tcp-acceptor",
-            WorkerType::NONE             => "none",
+            WorkerType::CACHE_LOOKUP => "cache-lookup",
+            WorkerType::ZONE_MANAGER => "zone-manager",
+            WorkerType::RESOLVER => "resolver",
+            WorkerType::CACHE_WRITER => "cache-writer",
+            WorkerType::ENCODER => "encoder",
+            WorkerType::SENDER => "sender",
+            WorkerType::CACHE_JANITOR => "cache-janitor",
+            WorkerType::METRICS => "metrics",
+            WorkerType::TCP_ACCEPTOR => "tcp-acceptor",
+            WorkerType::NONE => "none",
         };
         wl.entry(key).or_insert_with(Vec::new).push(Arc::clone(&w));
     }
@@ -55,18 +57,17 @@ pub(crate) async fn generate_channels(workers: Vec<Arc<SCloudWorker>>) -> Result
         }
     }
 
-    wire(tcp_acceptor,    listeners,         1024).await;
-    wire(listeners,       decoder,           1024).await;
-    wire(decoder,         cache_lookup,      1024).await;
-    wire(cache_lookup,    cache_writers,     1024).await;
-    wire(cache_lookup,    query_dispatcher,  1024).await;
-    wire(query_dispatcher, zone_manager,     1024).await;
-    wire(query_dispatcher, resolvers,        1024).await;
-    wire(zone_manager,    cache_writers,     1024).await;
-    wire(resolvers,       cache_writers,     1024).await;
-    wire(cache_writers,   encoders,          1024).await;
-    wire(encoders,        senders,           1024).await;
+    wire(tcp_acceptor, listeners, 1024).await;
+    wire(listeners, decoder, 1024).await;
+    wire(decoder, cache_lookup, 1024).await;
+    wire(cache_lookup, cache_writers, 1024).await;
+    wire(cache_lookup, query_dispatcher, 1024).await;
+    wire(query_dispatcher, zone_manager, 1024).await;
+    wire(query_dispatcher, resolvers, 1024).await;
+    wire(zone_manager, cache_writers, 1024).await;
+    wire(resolvers, cache_writers, 1024).await;
+    wire(cache_writers, encoders, 1024).await;
+    wire(encoders, senders, 1024).await;
 
     Ok(())
-
 }

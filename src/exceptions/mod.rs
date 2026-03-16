@@ -195,8 +195,12 @@ impl SCloudException {
             }
 
             //QCLASS
-            SCloudException::SCLOUD_QCLASS_U16_FOR_DNSCLASS_UNKNOWN => "Unknown `q_class`, failed to find a DNSClass for a u16.",
-            SCloudException::SCLOUD_QCLASS_DNSCLASS_FOR_U16_UNKNOWN => "Unknown `q_class`, failed to find a u16 for a DNSClass.",
+            SCloudException::SCLOUD_QCLASS_U16_FOR_DNSCLASS_UNKNOWN => {
+                "Unknown `q_class`, failed to find a DNSClass for a u16."
+            }
+            SCloudException::SCLOUD_QCLASS_DNSCLASS_FOR_U16_UNKNOWN => {
+                "Unknown `q_class`, failed to find a u16 for a DNSClass."
+            }
 
             // STUB RESOLVER
             SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_ID => {

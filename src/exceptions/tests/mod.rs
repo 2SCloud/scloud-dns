@@ -62,7 +62,10 @@ mod tests {
                 17,
                 SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_COMPRESSION_FAILED,
             ),
-            (18, SCloudException::SCLOUD_QTYPE_U16_FOR_DNSRECORDTYPE_UNKNOWN),
+            (
+                18,
+                SCloudException::SCLOUD_QTYPE_U16_FOR_DNSRECORDTYPE_UNKNOWN,
+            ),
             (19, SCloudException::SCLOUD_QCLASS_U16_FOR_DNSCLASS_UNKNOWN),
             (20, SCloudException::SCLOUD_QCLASS_DNSCLASS_FOR_U16_UNKNOWN),
             (21, SCloudException::SCLOUD_STUB_RESOLVER_INVALID_DNS_ID),
@@ -157,7 +160,10 @@ mod tests {
             (74, SCloudException::SCLOUD_WORKER_FAILED_TO_CREATE_DECODER),
             (75, SCloudException::SCLOUD_WORKER_UNKNOWN_TYPE),
             (76, SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED),
-            (77, SCloudException::SCLOUD_QTYPE_DNSRECORDTYPE_FOR_U16_UNKNOWN)
+            (
+                77,
+                SCloudException::SCLOUD_QTYPE_DNSRECORDTYPE_FOR_U16_UNKNOWN,
+            ),
         ]
     }
 

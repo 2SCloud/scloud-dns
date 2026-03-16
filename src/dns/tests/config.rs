@@ -1,6 +1,5 @@
 #[allow(unused_imports)]
 mod tests {
-    use std::arch::asm;
     use crate::Config;
     use crate::Path;
     use crate::config::{
@@ -8,6 +7,7 @@ mod tests {
         LimitsConfig, ListenerConfig, Protocol, RateLimitConfig, RecursionConfig, ServerConfig,
         ZoneConfig, ZoneType,
     };
+    use std::arch::asm;
     use std::net::SocketAddr;
     use tempfile::NamedTempFile;
 

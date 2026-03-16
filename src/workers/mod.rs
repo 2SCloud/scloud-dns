@@ -88,10 +88,7 @@ impl SCloudWorker {
         })
     }
 
-    pub async fn run(
-        self: Arc<Self>,
-        gate: Option<Arc<StartGate>>,
-    ) -> Result<(), SCloudException> {
+    pub async fn run(self: Arc<Self>, gate: Option<Arc<StartGate>>) -> Result<(), SCloudException> {
         log_sdebug!(
             "Running SCloudWorker [ID: {}][TYPE: {:?}]",
             self.get_worker_id(),
@@ -187,7 +184,15 @@ impl SCloudWorker {
     }
 
     #[inline]
-    pub async fn get_dns_rx_tx(&self) -> Result<(Vec<mpsc::Receiver<InFlightTask>>, Vec<mpsc::Sender<InFlightTask>>), SCloudException> {
+    pub async fn get_dns_rx_tx(
+        &self,
+    ) -> Result<
+        (
+            Vec<mpsc::Receiver<InFlightTask>>,
+            Vec<mpsc::Sender<InFlightTask>>,
+        ),
+        SCloudException,
+    > {
         Ok((self.get_dns_rx().await?, self.get_dns_tx().await?))
     }
 
