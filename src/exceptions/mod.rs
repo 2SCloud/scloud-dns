@@ -111,9 +111,17 @@ pub enum SCloudException {
     SCLOUD_WORKER_LISTENER_BIND_FAILED = 73,
     SCLOUD_WORKER_FAILED_TO_CREATE_DECODER = 74,
     SCLOUD_WORKER_UNKNOWN_TYPE = 75,
+    SCLOUD_WORKER_SEM_CLOSED = 81,
+
+    // TCP ACCEPTOR
+    SCLOUD_WORKER_TCPA_SOCKET_CREATION_FAILED = 78,
+    SCLOUD_WORKER_TCPA_RECV_FAILED = 79,
+    SCLOUD_WORKER_TCPA_SOCKET_BIND_FAILED = 80,
 
     // LISTENER
     SCLOUD_WORKER_LISTENER_RECV_FAILED = 76,
+    SCLOUD_WORKER_LISTENER_NO_SOCKET = 82,
+
     // DECODER
 }
 
@@ -341,6 +349,11 @@ impl SCloudException {
 
             // LISTENER
             SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED => "Listener revc() failed",
+            // LISTENER
+            SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED => "Listener recv() failed.",
+            SCloudException::SCLOUD_WORKER_LISTENER_NO_SOCKET => {
+                "LISTENER worker spawned directly — use TCP_ACCEPTOR instead."
+            }
             _ => "Unknown error.",
         }
     }
@@ -444,6 +457,11 @@ impl TryFrom<u16> for SCloudException {
             74 => Ok(SCloudException::SCLOUD_WORKER_FAILED_TO_CREATE_DECODER),
             75 => Ok(SCloudException::SCLOUD_WORKER_UNKNOWN_TYPE),
             76 => Ok(SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED),
+            78 => Ok(SCloudException::SCLOUD_WORKER_TCPA_SOCKET_CREATION_FAILED),
+            79 => Ok(SCloudException::SCLOUD_WORKER_TCPA_RECV_FAILED),
+            80 => Ok(SCloudException::SCLOUD_WORKER_TCPA_SOCKET_BIND_FAILED),
+            81 => Ok(SCloudException::SCLOUD_WORKER_SEM_CLOSED),
+            82 => Ok(SCloudException::SCLOUD_WORKER_LISTENER_NO_SOCKET),
 
             _ => Err(SCloudException::SCLOUD_WORKER_UNKNOWN_TYPE),
         }
@@ -534,6 +552,11 @@ impl TryFrom<SCloudException> for u16 {
             SCloudException::SCLOUD_WORKER_FAILED_TO_CREATE_DECODER => Ok(74),
             SCloudException::SCLOUD_WORKER_UNKNOWN_TYPE => Ok(75),
             SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED => Ok(76),
+            SCloudException::SCLOUD_WORKER_TCPA_SOCKET_CREATION_FAILED => Ok(78),
+            SCloudException::SCLOUD_WORKER_TCPA_RECV_FAILED => Ok(79),
+            SCloudException::SCLOUD_WORKER_TCPA_SOCKET_BIND_FAILED => Ok(80),
+            SCloudException::SCLOUD_WORKER_SEM_CLOSED => Ok(81),
+            SCloudException::SCLOUD_WORKER_LISTENER_NO_SOCKET => Ok(82),
             _ => Err(SCloudException::SCLOUD_QCLASS_DNSCLASS_FOR_U16_UNKNOWN),
         }
     }

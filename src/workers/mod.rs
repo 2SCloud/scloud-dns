@@ -100,10 +100,7 @@ impl SCloudWorker {
         }
         match WorkerType::try_from(self.worker_type.load(Ordering::Relaxed)).unwrap() {
             WorkerType::LISTENER => {
-                self.clone().set_state(WorkerState::IDLE);
-                let tx = self.get_dns_tx().await?;
-                let rx = self.get_dns_rx().await?;
-                types::listener::run_dns_listener(self, "0.0.0.0:5353", rx, tx).await?;
+                return Err(SCloudException::SCLOUD_WORKER_LISTENER_NO_SOCKET);
             }
             WorkerType::DECODER => {
                 self.clone().set_state(WorkerState::IDLE);
@@ -155,8 +152,8 @@ impl SCloudWorker {
             }
             WorkerType::TCP_ACCEPTOR => {
                 self.clone().set_state(WorkerState::IDLE);
-                let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::tcp_acceptor::run_dns_tcp_acceptor(self.clone(), rx, tx).await?;
+                let tx = self.get_dns_tx().await?;
+                types::tcp_acceptor::run_dns_tcp_acceptor(self.clone(), tx).await?;
             }
             _ => {}
         }
@@ -236,17 +233,17 @@ impl SCloudWorker {
 
     #[inline]
     pub fn get_state(&self) -> u8 {
-        self.state.load(Ordering::Relaxed)
+        self.state.load(Ordering::Acquire)
     }
 
     #[inline]
     pub fn get_shutdown_requested(&self) -> bool {
-        self.shutdown_requested.load(Ordering::Relaxed)
+        self.shutdown_requested.load(Ordering::Acquire)
     }
 
     #[inline]
     pub fn get_shutdown_mode(&self) -> u8 {
-        self.shutdown_mode.load(Ordering::Relaxed)
+        self.shutdown_mode.load(Ordering::Acquire)
     }
 
     #[inline]

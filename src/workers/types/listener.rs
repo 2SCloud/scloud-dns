@@ -70,16 +70,3 @@ pub async fn run_dns_listener_with_socket(
         }
     }
 }
-
-pub async fn run_dns_listener(
-    worker: Arc<SCloudWorker>,
-    bind_addr: &str,
-    rx: Vec<mpsc::Receiver<InFlightTask>>,
-    tx: Vec<mpsc::Sender<InFlightTask>>,
-) -> Result<(), SCloudException> {
-    let socket = UdpSocket::bind(bind_addr)
-        .await
-        .map_err(|_| SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED)?;
-
-    run_dns_listener_with_socket(worker, socket, rx, tx).await
-}
