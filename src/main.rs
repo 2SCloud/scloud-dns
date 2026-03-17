@@ -15,8 +15,23 @@ mod workers;
 #[tokio::main(flavor = "multi_thread", worker_threads = 8)]
 async fn main() -> Result<(), SCloudException> {
     let config = Config::from_file(Path::new("./config/config.json"))?;
-    let gate = Arc::new(StartGate::new(1));
     utils::logging::init(config.logging.clone())?;
+
+    #[cfg(target_os = "windows")]
+    {
+        use tokio::net::UdpSocket;
+        use std::sync::Arc;
+        use workers::types::listener::SHARED_UDP_SOCKET;
+
+        let udp = UdpSocket::bind("0.0.0.0:5353")
+            .await
+            .map_err(|_| SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED)?;
+        // Buffer large pour compenser l'absence de SO_REUSEPORT
+        // Le socket reçoit tout, les workers Tokio se partagent les appels recv_from
+        SHARED_UDP_SOCKET.set(Arc::new(udp)).ok();
+    }
+
+    let gate = Arc::new(StartGate::new(1));
 
     let mut workers: Vec<Arc<SCloudWorker>> = vec![
         Arc::new(SCloudWorker::new(WorkerType::TCP_ACCEPTOR)?),
@@ -51,7 +66,6 @@ async fn main() -> Result<(), SCloudException> {
     ];
 
     workers::manager::channels_generation::generate_channels(workers.clone()).await;
-
     workers.sort_by_key(|w| w.get_worker_id());
 
     let mut handles: Vec<tokio::task::JoinHandle<()>> = Vec::new();

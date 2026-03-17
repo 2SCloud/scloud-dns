@@ -142,6 +142,7 @@ mod tests {
         use std::net::SocketAddr;
 
         let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
+        #[cfg(not(target_os = "windows"))]
         socket.set_reuse_port(true).unwrap();
         socket.set_nonblocking(true).unwrap();
 
