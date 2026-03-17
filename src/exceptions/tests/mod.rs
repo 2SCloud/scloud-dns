@@ -267,7 +267,7 @@ mod tests {
             "TCP_ACCEPTOR recv() failed.",
             "Impossible to bind TCP_ACCEPTOR socket, most probable cause: another worker is already using this port.",
             // LISTENER
-            "Listener revc() failed.",
+            "Listener recv() failed.",
             "LISTENER worker spawned directly — use TCP_ACCEPTOR instead.",
         ];
 
