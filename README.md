@@ -1,5 +1,4 @@
-<h1 align="center">2SCloud DNS</h1>
-
+<h1 align="center"><img src="https://github.com/user-attachments/assets/f44d784e-cf87-411e-b6a8-148bf18bbed5" alt="logo" width="40%"></h1>
 <p align="center">
   <a href="https://2scloud.github.io/scloud-dns/coverage/">
     <img src="https://img.shields.io/endpoint?url=https://2scloud.github.io/scloud-dns/coverage.json" alt="Coverage">

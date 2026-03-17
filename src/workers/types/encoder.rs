@@ -6,13 +6,31 @@ use tokio::sync::mpsc;
 
 pub async fn run_dns_encoder(
     worker: Arc<SCloudWorker>,
-    mut rx: mpsc::Receiver<InFlightTask>,
-    mut tx: mpsc::Sender<InFlightTask>,
+    mut rx: Vec<mpsc::Receiver<InFlightTask>>,
+    tx: Vec<mpsc::Sender<InFlightTask>>,
 ) -> Result<(), SCloudException> {
     loop {
-        while let Some(mut msg) = rx.recv().await {
-            if tx.send(msg).await.is_err() {
-                return Ok(());
+        for rx_channel in rx.iter_mut() {
+            while let Some(msg) = rx_channel.recv().await {
+                let mut current = Some(msg);
+
+                for tx_channel in tx.iter() {
+                    match tx_channel.try_send(current.take().unwrap()) {
+                        Ok(_) => break,
+                        Err(mpsc::error::TrySendError::Full(returned)) => {
+                            current = Some(returned);
+                        }
+                        Err(mpsc::error::TrySendError::Closed(_)) => {
+                            return Ok(());
+                        }
+                    }
+                }
+
+                if let Some(unsent) = current {
+                    if tx[0].send(unsent).await.is_err() {
+                        return Ok(());
+                    }
+                }
             }
         }
     }

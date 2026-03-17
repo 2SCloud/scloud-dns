@@ -2,9 +2,11 @@ use crate::workers::WorkerType;
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
+use std::sync::Arc;
 use std::time::SystemTime;
-use tokio::sync::OwnedSemaphorePermit;
+use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use uuid::Uuid;
+use crate::exceptions::SCloudException;
 
 #[allow(unused)]
 #[allow(non_camel_case_types)]
@@ -26,4 +28,35 @@ pub(crate) struct SCloudWorkerTask {
 pub struct InFlightTask {
     pub task: SCloudWorkerTask,
     pub _permit: OwnedSemaphorePermit,
+}
+
+impl InFlightTask {
+    pub async fn new(
+        payload: &[u8],
+        peer: SocketAddr,
+        worker_type: WorkerType,
+        sem: Arc<Semaphore>,
+    ) -> Result<Self, SCloudException> {
+        let permit = sem
+            .acquire_owned()
+            .await
+            .map_err(|_| SCloudException::SCLOUD_WORKER_SEM_CLOSED)?;
+
+        Ok(Self {
+            task: SCloudWorkerTask {
+                task_id: Uuid::new_v4(),
+                for_type: worker_type,
+                for_who: peer,
+                payload: Bytes::copy_from_slice(payload),
+                attempts: 0,
+                max_attempts: 3,
+                created_at: SystemTime::now(),
+                deadline_timeout: None,
+                priority: 0,
+                reply_to: None,
+                correlation_id: None,
+            },
+            _permit: permit,
+        })
+    }
 }

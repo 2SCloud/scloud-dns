@@ -190,7 +190,9 @@ impl TryFrom<DNSRecordType> for u16 {
             DNSRecordType::TXT => Ok(16),
             DNSRecordType::URI => Ok(256),
             DNSRecordType::ZONEMD => Ok(63),
-            DNSRecordType::Unknown(_) => Err(SCloudException::SCLOUD_QTYPE_DNSRECORDTYPE_FOR_U16_UNKNOWN),
+            DNSRecordType::Unknown(_) => {
+                Err(SCloudException::SCLOUD_QTYPE_DNSRECORDTYPE_FOR_U16_UNKNOWN)
+            }
         }
     }
 }

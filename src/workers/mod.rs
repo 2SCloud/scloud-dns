@@ -22,8 +22,8 @@ pub(crate) struct SCloudWorker {
     pub(crate) worker_type: AtomicU8,
 
     // CHANNEL
-    pub(crate) dns_tx: Mutex<Option<mpsc::Sender<InFlightTask>>>,
-    pub(crate) dns_rx: Mutex<Option<mpsc::Receiver<InFlightTask>>>,
+    pub(crate) dns_tx: Mutex<Vec<mpsc::Sender<InFlightTask>>>,
+    pub(crate) dns_rx: Mutex<Vec<mpsc::Receiver<InFlightTask>>>,
 
     // RESOURCES/LIMITS
     pub(crate) stack_size_bytes: AtomicUsize,
@@ -64,8 +64,8 @@ impl SCloudWorker {
         Ok(Self {
             worker_id: AtomicU64::new(manager::generate_worker_id()),
             worker_type: AtomicU8::new(worker_type as u8),
-            dns_tx: Mutex::new(None),
-            dns_rx: Mutex::new(None),
+            dns_tx: Mutex::new(Vec::new()),
+            dns_rx: Mutex::new(Vec::new()),
             stack_size_bytes: AtomicUsize::new(2 * 1024 * 1024),
             buffer_budget_bytes: AtomicUsize::new(4 * 1024 * 1024),
             max_stack_size_bytes: AtomicUsize::new(32 * 1024 * 1024),
@@ -88,23 +88,19 @@ impl SCloudWorker {
         })
     }
 
-    pub(crate) async fn run(
-        self: Arc<Self>,
-        gate: Option<Arc<StartGate>>,
-    ) -> Result<(), SCloudException> {
+    pub async fn run(self: Arc<Self>, gate: Option<Arc<StartGate>>) -> Result<(), SCloudException> {
         log_sdebug!(
             "Running SCloudWorker [ID: {}][TYPE: {:?}]",
             self.get_worker_id(),
             self.get_worker_type()
         );
+
         if let Some(g) = gate {
             g.done().await;
         }
         match WorkerType::try_from(self.worker_type.load(Ordering::Relaxed)).unwrap() {
             WorkerType::LISTENER => {
-                self.clone().set_state(WorkerState::IDLE);
-                let tx = self.get_dns_tx().await?;
-                types::listener::run_dns_listener(self, "0.0.0.0:5353", tx).await?;
+                return Err(SCloudException::SCLOUD_WORKER_LISTENER_NO_SOCKET);
             }
             WorkerType::DECODER => {
                 self.clone().set_state(WorkerState::IDLE);
@@ -143,13 +139,12 @@ impl SCloudWorker {
             }
             WorkerType::SENDER => {
                 self.clone().set_state(WorkerState::IDLE);
-                let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::sender::run_dns_sender(self.clone(), rx, tx).await?;
+                let rx = self.get_dns_rx().await?;
+                types::sender::run_dns_sender(self.clone(), rx).await?;
             }
             WorkerType::CACHE_JANITOR => {
                 self.clone().set_state(WorkerState::IDLE);
-                let rx = self.get_dns_rx().await?;
-                types::cache_janitor::run_dns_cache_janitor(self.clone(), rx).await?;
+                types::cache_janitor::run_dns_cache_janitor(self.clone()).await?;
             }
             WorkerType::METRICS => {
                 self.clone().set_state(WorkerState::IDLE);
@@ -157,8 +152,8 @@ impl SCloudWorker {
             }
             WorkerType::TCP_ACCEPTOR => {
                 self.clone().set_state(WorkerState::IDLE);
-                let (rx, tx) = self.get_dns_rx_tx().await?;
-                types::tcp_acceptor::run_dns_tcp_acceptor(self.clone(), rx, tx).await?;
+                let tx = self.get_dns_tx().await?;
+                types::tcp_acceptor::run_dns_tcp_acceptor(self.clone(), tx).await?;
             }
             _ => {}
         }
@@ -176,44 +171,44 @@ impl SCloudWorker {
     }
 
     #[inline]
+    pub async fn push_dns_rx(&self, rx: mpsc::Receiver<InFlightTask>) {
+        self.dns_rx.lock().await.push(rx);
+    }
+
+    #[inline]
+    pub async fn push_dns_tx_many(&self, txs: Vec<mpsc::Sender<InFlightTask>>) {
+        self.dns_tx.lock().await.extend(txs);
+    }
+
+    #[inline]
     pub async fn get_dns_rx_tx(
         &self,
-    ) -> Result<(mpsc::Receiver<InFlightTask>, mpsc::Sender<InFlightTask>), SCloudException> {
-        let rx = self
-            .dns_rx
-            .lock()
-            .await
-            .take()
-            .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET);
-
-        let tx = self
-            .dns_tx
-            .lock()
-            .await
-            .as_ref()
-            .cloned()
-            .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET);
-
-        Ok((rx?, tx?))
+    ) -> Result<
+        (
+            Vec<mpsc::Receiver<InFlightTask>>,
+            Vec<mpsc::Sender<InFlightTask>>,
+        ),
+        SCloudException,
+    > {
+        Ok((self.get_dns_rx().await?, self.get_dns_tx().await?))
     }
 
     #[inline]
-    pub async fn get_dns_rx(&self) -> Result<mpsc::Receiver<InFlightTask>, SCloudException> {
-        self.dns_rx
-            .lock()
-            .await
-            .take()
-            .ok_or(SCloudException::SCLOUD_WORKER_RX_NOT_SET)
+    pub async fn get_dns_tx(&self) -> Result<Vec<mpsc::Sender<InFlightTask>>, SCloudException> {
+        let mut guard = self.dns_tx.lock().await;
+        if guard.is_empty() {
+            return Err(SCloudException::SCLOUD_WORKER_TX_NOT_SET);
+        }
+        Ok(std::mem::take(&mut *guard))
     }
 
     #[inline]
-    pub async fn get_dns_tx(&self) -> Result<mpsc::Sender<InFlightTask>, SCloudException> {
-        self.dns_tx
-            .lock()
-            .await
-            .as_ref()
-            .cloned()
-            .ok_or(SCloudException::SCLOUD_WORKER_TX_NOT_SET)
+    pub async fn get_dns_rx(&self) -> Result<Vec<mpsc::Receiver<InFlightTask>>, SCloudException> {
+        let mut guard = self.dns_rx.lock().await;
+        if guard.is_empty() {
+            return Err(SCloudException::SCLOUD_WORKER_RX_NOT_SET);
+        }
+        Ok(std::mem::take(&mut *guard))
     }
 
     #[inline]
@@ -238,17 +233,17 @@ impl SCloudWorker {
 
     #[inline]
     pub fn get_state(&self) -> u8 {
-        self.state.load(Ordering::Relaxed)
+        self.state.load(Ordering::Acquire)
     }
 
     #[inline]
     pub fn get_shutdown_requested(&self) -> bool {
-        self.shutdown_requested.load(Ordering::Relaxed)
+        self.shutdown_requested.load(Ordering::Acquire)
     }
 
     #[inline]
     pub fn get_shutdown_mode(&self) -> u8 {
-        self.shutdown_mode.load(Ordering::Relaxed)
+        self.shutdown_mode.load(Ordering::Acquire)
     }
 
     #[inline]
@@ -323,12 +318,12 @@ impl SCloudWorker {
 
     #[inline]
     pub async fn set_dns_tx(&self, tx: mpsc::Sender<InFlightTask>) {
-        *self.dns_tx.lock().await = Some(tx);
+        self.dns_tx.lock().await.push(tx);
     }
 
     #[inline]
     pub async fn set_dns_rx(&self, rx: mpsc::Receiver<InFlightTask>) {
-        *self.dns_rx.lock().await = Some(rx);
+        self.dns_rx.lock().await.push(rx);
     }
 
     #[inline]
@@ -437,6 +432,52 @@ impl SCloudWorker {
 #[repr(u8)]
 #[allow(unused)]
 #[allow(non_camel_case_types)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize, Eq)]
+pub enum WorkerType {
+    NONE = 99,
+    LISTENER = 0,
+    DECODER = 1,
+    QUERY_DISPATCHER = 2,
+    CACHE_LOOKUP = 3,
+    ZONE_MANAGER = 4,
+    RESOLVER = 5,
+    CACHE_WRITER = 6,
+    ENCODER = 7,
+    SENDER = 8,
+
+    CACHE_JANITOR = 9,
+
+    METRICS = 10,
+    TCP_ACCEPTOR = 11,
+}
+
+impl TryFrom<u8> for WorkerType {
+    type Error = ();
+
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        Ok(match v {
+            0 => WorkerType::LISTENER,
+            1 => WorkerType::DECODER,
+            2 => WorkerType::QUERY_DISPATCHER,
+            3 => WorkerType::CACHE_LOOKUP,
+            4 => WorkerType::ZONE_MANAGER,
+            5 => WorkerType::RESOLVER,
+            6 => WorkerType::CACHE_WRITER,
+            7 => WorkerType::ENCODER,
+            8 => WorkerType::SENDER,
+            9 => WorkerType::CACHE_JANITOR,
+            10 => WorkerType::METRICS,
+            11 => WorkerType::TCP_ACCEPTOR,
+            99 => WorkerType::NONE,
+            // TODO: return an SCloudException
+            _ => return Err(()),
+        })
+    }
+}
+
+#[repr(u8)]
+#[allow(unused)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq)]
 pub(crate) enum WorkerState {
     INIT = 0,
@@ -480,52 +521,6 @@ impl TryFrom<u8> for ShutdownMode {
         Ok(match v {
             0 => ShutdownMode::GRACEFUL,
             1 => ShutdownMode::IMMEDIATE,
-            // TODO: return an SCloudException
-            _ => return Err(()),
-        })
-    }
-}
-
-#[repr(u8)]
-#[allow(unused)]
-#[allow(non_camel_case_types)]
-#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize, Eq)]
-pub enum WorkerType {
-    NONE = 99,
-    LISTENER = 0,
-    DECODER = 1,
-    QUERY_DISPATCHER = 2,
-    CACHE_LOOKUP = 3,
-    ZONE_MANAGER = 4,
-    RESOLVER = 5,
-    CACHE_WRITER = 6,
-    ENCODER = 7,
-    SENDER = 8,
-
-    CACHE_JANITOR = 9,
-
-    METRICS = 10,
-    TCP_ACCEPTOR = 11,
-}
-
-impl TryFrom<u8> for WorkerType {
-    type Error = ();
-
-    fn try_from(v: u8) -> Result<Self, Self::Error> {
-        Ok(match v {
-            0 => WorkerType::LISTENER,
-            1 => WorkerType::DECODER,
-            2 => WorkerType::QUERY_DISPATCHER,
-            3 => WorkerType::CACHE_LOOKUP,
-            4 => WorkerType::ZONE_MANAGER,
-            5 => WorkerType::RESOLVER,
-            6 => WorkerType::CACHE_WRITER,
-            7 => WorkerType::ENCODER,
-            8 => WorkerType::SENDER,
-            9 => WorkerType::CACHE_JANITOR,
-            10 => WorkerType::METRICS,
-            11 => WorkerType::TCP_ACCEPTOR,
-            99 => WorkerType::NONE,
             // TODO: return an SCloudException
             _ => return Err(()),
         })
