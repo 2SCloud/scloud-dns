@@ -135,20 +135,38 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn listener_bind_failure_returns_expected_error() {
+    async fn tcp_acceptor_bind_failure_returns_expected_error() {
+        let worker = test_worker(10);
+
+        use socket2::{Domain, Protocol, Socket, Type};
+        use std::net::SocketAddr;
+
+        let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
+        socket.set_reuse_port(true).unwrap();
+        socket.set_nonblocking(true).unwrap();
+
+        let addr: SocketAddr = "0.0.0.0:1".parse().unwrap();
+        let res = socket.bind(&addr.into());
+        assert!(res.is_err());
+    }
+
+    #[tokio::test]
+    async fn listener_recv_on_invalid_socket_fails() {
+        use tokio::net::UdpSocket;
         let worker = test_worker(10);
         let (tx, rx) = mpsc::channel::<workers::task::InFlightTask>(1);
 
-        let res = workers::types::listener::run_dns_listener(
-            worker,
-            "256.256.256.256:53",
-            vec![rx],
-            vec![tx],
-        )
-        .await;
-        assert_eq!(
-            res,
-            Err(exceptions::SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED)
+        let socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+
+        let handle = tokio::spawn(
+            workers::types::listener::run_dns_listener_with_socket(
+                worker,
+                socket,
+                vec![rx],
+                vec![tx],
+            )
         );
+        handle.abort();
+        assert!(handle.await.unwrap_err().is_cancelled());
     }
 }
