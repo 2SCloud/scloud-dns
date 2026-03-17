@@ -346,9 +346,21 @@ impl SCloudException {
                 "Failed to create a decoding worker."
             }
             SCloudException::SCLOUD_WORKER_UNKNOWN_TYPE => "Unknown worker type.",
+            SCloudException::SCLOUD_WORKER_SEM_CLOSED => {
+                "Failed to .acquire_owned(), because the Semaphore is closed."
+            }
 
-            // LISTENER
-            SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED => "Listener revc() failed",
+            // TCP ACCEPTOR
+            SCloudException::SCLOUD_WORKER_TCPA_SOCKET_CREATION_FAILED => {
+                "Impossible to create a TCP_ACCEPTOR worker, socket creation failed."
+            }
+            SCloudException::SCLOUD_WORKER_TCPA_RECV_FAILED => {
+                "TCP_ACCEPTOR recv() failed."
+            }
+            SCloudException::SCLOUD_WORKER_TCPA_SOCKET_BIND_FAILED => {
+                "Impossible to bind TCP_ACCEPTOR socket, most probable cause: another worker is already using this port."
+            }
+
             // LISTENER
             SCloudException::SCLOUD_WORKER_LISTENER_RECV_FAILED => "Listener recv() failed.",
             SCloudException::SCLOUD_WORKER_LISTENER_NO_SOCKET => {

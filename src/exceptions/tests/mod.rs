@@ -169,7 +169,7 @@ mod tests {
 
     #[test]
     fn test_exceptions_to_str() {
-        let ex_msg_array: [&'static str; 78] = [
+        let ex_msg_array: [&'static str; 83] = [
             // HEADER SECTION
             "Buffer length is less than header length.",
             "The header is empty.",
@@ -261,8 +261,14 @@ mod tests {
             "Listener bind just failed at 'threads::run(&self)'.",
             "Failed to create a decoding worker.",
             "Unknown worker type.",
+            "Failed to .acquire_owned(), because the Semaphore is closed.",
+            // TCP ACCEPTOR
+            "Impossible to create a TCP_ACCEPTOR worker, socket creation failed.",
+            "TCP_ACCEPTOR recv() failed.",
+            "Impossible to bind TCP_ACCEPTOR socket, most probable cause: another worker is already using this port.",
             // LISTENER
             "Listener revc() failed",
+            "LISTENER worker spawned directly — use TCP_ACCEPTOR instead.",
         ];
 
         let mut i = 0;
@@ -294,7 +300,7 @@ mod tests {
     #[test]
     fn test_exceptions_iter_count() {
         let count = SCloudException::iter().count();
-        let expected_count = 78;
+        let expected_count = 83;
         assert_eq!(count, expected_count);
     }
 
@@ -322,7 +328,7 @@ mod tests {
 
     #[test]
     fn tryfrom_u16_to_exception_out_of_range_is_err() {
-        for &code in &[78u16, 100, 1000, u16::MAX] {
+        for &code in &[83u16, 100, 1000, u16::MAX] {
             let err = SCloudException::try_from(code)
                 .expect_err(&format!("code {code}: expected Err, got Ok"));
             assert_eq!(
