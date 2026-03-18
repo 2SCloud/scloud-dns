@@ -16,6 +16,12 @@ pub async fn run_dns_listener_with_socket(
 ) -> Result<(), SCloudException> {
     let mut buf = [0u8; 65_535];
     worker.set_state(WorkerState::IDLE);
+    if tx.is_empty() {
+        return Err(SCloudException::SCLOUD_WORKER_RX_NOT_SET);
+    }
+    if tx.is_empty() {
+        return Err(SCloudException::SCLOUD_WORKER_TX_NOT_SET);
+    }
 
     loop {
         let (len, src) = socket
@@ -92,25 +98,23 @@ pub async fn run_dns_listener_with_shared_socket(
     }
 }
 
-async fn forward_task(
-    task: InFlightTask,
-    tx: &[mpsc::Sender<InFlightTask>],
-) {
+async fn forward_task(task: InFlightTask, tx: &[mpsc::Sender<InFlightTask>]) -> bool {
     let mut current = Some(task);
     for tx_channel in tx.iter() {
         match tx_channel.try_send(current.take().unwrap()) {
-            Ok(_) => return,
+            Ok(_) => return true,
             Err(mpsc::error::TrySendError::Full(returned)) => {
                 current = Some(returned);
             }
-            Err(mpsc::error::TrySendError::Closed(_)) => return,
+            Err(mpsc::error::TrySendError::Closed(_)) => return false,
         }
     }
     if let Some(unsent) = current {
         if let Some(tx_channel) = tx.first() {
-            let _ = tx_channel.send(unsent).await;
+            return tx_channel.send(unsent).await.is_ok();
         }
     }
+    true
 }
 
 #[cfg(target_os = "windows")]

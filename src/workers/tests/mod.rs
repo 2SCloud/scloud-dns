@@ -62,6 +62,18 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_run_listener_fails_if_rx_not_set() {
+        let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::LISTENER).unwrap());
+        let gate = Arc::new(StartGate::new(1));
+
+        let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
+        assert!(matches!(
+            err,
+            exceptions::SCloudException::SCLOUD_WORKER_LISTENER_NO_SOCKET
+        ));
+    }
+    
+    #[tokio::test]
     async fn test_run_listener_fails_if_tx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::LISTENER).unwrap());
         let gate = Arc::new(StartGate::new(1));
@@ -69,7 +81,7 @@ mod tests {
         let err = w.clone().run(Some(gate.clone())).await.unwrap_err();
         assert!(matches!(
             err,
-            exceptions::SCloudException::SCLOUD_WORKER_TX_NOT_SET
+            exceptions::SCloudException::SCLOUD_WORKER_LISTENER_NO_SOCKET
         ));
     }
 

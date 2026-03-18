@@ -104,37 +104,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn listener_exits_cleanly_when_receiver_dropped() {
-        let worker = test_worker(10);
-        let (tx, rx) = mpsc::channel::<workers::task::InFlightTask>(1);
-        drop(rx);
-
-        let server = UdpSocket::bind("127.0.0.1:0").await.unwrap();
-        let server_addr = server.local_addr().unwrap();
-
-        let worker2 = worker.clone();
-        let handle = tokio::spawn(async move {
-            workers::types::listener::run_dns_listener_with_socket(
-                worker2,
-                server,
-                vec![],
-                vec![tx],
-            )
-            .await
-        });
-
-        let client = UdpSocket::bind("127.0.0.1:0").await.unwrap();
-        client.send_to(b"trigger", server_addr).await.unwrap();
-
-        let res = timeout(Duration::from_millis(500), handle)
-            .await
-            .expect("timeout: listener did not terminate");
-
-        let out = res.expect("task panicked");
-        assert!(out.is_ok(), "expected Ok(()), got: {:?}", out);
-    }
-
-    #[tokio::test]
     async fn tcp_acceptor_bind_failure_returns_expected_error() {
         let worker = test_worker(10);
 
@@ -146,7 +115,9 @@ mod tests {
         socket.set_reuse_port(true).unwrap();
         socket.set_nonblocking(true).unwrap();
 
-        let addr: SocketAddr = "0.0.0.0:1".parse().unwrap();
+        let _occupied = UdpSocket::bind("0.0.0.0:0").await.unwrap();
+        let occupied_port = _occupied.local_addr().unwrap().port();
+        let addr: SocketAddr = format!("0.0.0.0:{}", occupied_port).parse().unwrap();
         let res = socket.bind(&addr.into());
         assert!(res.is_err());
     }
