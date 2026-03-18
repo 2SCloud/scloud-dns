@@ -14,7 +14,7 @@ spec:
         app: scloud-dns
     spec:
       serviceAccountName: scloud-dns
-      automountServiceAccountToken: true
+      automountServiceAccountToken: true # NOSONAR - RBAC managed in scloud-eg-compute/platform/rbac repo (Role + RoleBinding scloud-dns)
       volumes:
         - name: logs
           emptyDir: {}
