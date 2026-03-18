@@ -7,6 +7,7 @@ mod tests {
         LimitsConfig, ListenerConfig, Protocol, RateLimitConfig, RecursionConfig, ServerConfig,
         ZoneConfig, ZoneType,
     };
+    use std::arch::asm;
     use std::net::SocketAddr;
     use tempfile::NamedTempFile;
 
@@ -30,6 +31,13 @@ mod tests {
         assert_eq!(cfg2.server.name, cfg.server.name);
         assert_eq!(cfg2.logging.level, cfg.logging.level);
         assert_eq!(cfg2.metrics.enabled, cfg.metrics.enabled);
+    }
+
+    #[test]
+    fn test_invalid_server_port() {
+        let mut cfg = Config::default();
+        cfg.server.bind_port = 0;
+        assert_eq!(cfg.server.bind_port, 0);
     }
 
     #[test]

@@ -19,8 +19,7 @@ mod tests {
 
     #[test]
     fn test_tryfrom_u16_for_dns_record_type_unknown() {
-        let err = DNSRecordType::try_from(24616)
-            .expect_err("expected Err for unknown QTYPE");
+        let err = DNSRecordType::try_from(24616).expect_err("expected Err for unknown QTYPE");
 
         assert_eq!(
             err,
@@ -40,7 +39,10 @@ mod tests {
         let err = u16::try_from(DNSRecordType::Unknown(45616))
             .expect_err("expected Err for Unknown DNSRecordType");
 
-        assert_eq!(err, crate::exceptions::SCloudException::SCLOUD_QTYPE_DNSRECORDTYPE_FOR_U16_UNKNOWN);
+        assert_eq!(
+            err,
+            crate::exceptions::SCloudException::SCLOUD_QTYPE_DNSRECORDTYPE_FOR_U16_UNKNOWN
+        );
     }
 
     #[test]
@@ -55,8 +57,7 @@ mod tests {
     fn test_tryfrom_array_for_dns_record_type_unknown() {
         let bytes: &[u8; 2] = &[0x01, 0x80]; // 384
 
-        let err = DNSRecordType::try_from(bytes)
-            .expect_err("expected Err for unknown QTYPE bytes");
+        let err = DNSRecordType::try_from(bytes).expect_err("expected Err for unknown QTYPE bytes");
 
         assert_eq!(
             err,

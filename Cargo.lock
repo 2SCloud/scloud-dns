@@ -993,6 +993,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "socket2",
  "strum",
  "strum_macros",
  "tempfile",

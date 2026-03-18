@@ -113,9 +113,7 @@ mod tests {
         let (tx, rx) = mpsc::channel::<OtelLog>(1000);
         let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
 
-        let client = reqwest::Client::builder()
-            .build()
-            .unwrap();
+        let client = reqwest::Client::builder().build().unwrap();
         let url = format!("{}/v1/logs", server.uri());
 
         let max_batch = 999usize;
@@ -160,9 +158,7 @@ mod tests {
         let (_tx, rx) = mpsc::channel::<OtelLog>(1000);
         let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
 
-        let client = reqwest::Client::builder()
-            .build()
-            .unwrap();
+        let client = reqwest::Client::builder().build().unwrap();
         let url = format!("{}/v1/logs", server.uri());
 
         let handle = tokio::spawn(async move {
