@@ -37,7 +37,7 @@ impl App {
                 self.handle_key_event(key_event)
             }
             _ => {}
-        };
+        }
         Ok(())
     }
 
