@@ -8,6 +8,8 @@ name = "dns_stress_test"
 path = "src/bin/dns_stress_test.rs"
 
 [dependencies]
+ratatui = "0.30.0"
+crossterm = "0.29.0"
 strum = "0.26"
 strum_macros = "0.26"
 rand = "0.9.2"

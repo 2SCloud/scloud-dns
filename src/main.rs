@@ -11,11 +11,25 @@ mod dns;
 mod exceptions;
 mod utils;
 mod workers;
+mod ui;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 8)]
 async fn main() -> Result<(), SCloudException> {
     let config = Config::from_file(Path::new("./config/config.json"))?;
     utils::logging::init(config.logging.clone())?;
+
+    if config.logging.dyn_ui == false {
+        println!(r#"
+        ██████╗ ███████╗ ██████╗██╗      ██████╗ ██╗   ██╗██████╗
+        ╚════██╗██╔════╝██╔════╝██║     ██╔═══██╗██║   ██║██╔══██╗  scloud-dns (v0.2.3)
+         █████╔╝███████╗██║     ██║     ██║   ██║██║   ██║██║  ██║      org: https://github.com/2SCloud/
+        ██╔═══╝ ╚════██║██║     ██║     ██║   ██║██║   ██║██║  ██║      rep: https://github.com/2SCloud/scloud-dns
+        ███████╗███████║╚██████╗███████╗╚██████╔╝╚██████╔╝██████╔╝      own: @onihilist
+        ╚══════╝╚══════╝ ╚═════╝╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝
+        "#);
+    } else {
+        ratatui::run(|terminal| ui::App::default().run(terminal));
+    }
 
     #[cfg(target_os = "windows")]
     {
@@ -26,8 +40,6 @@ async fn main() -> Result<(), SCloudException> {
         let udp = UdpSocket::bind("0.0.0.0:5353")
             .await
             .map_err(|_| SCloudException::SCLOUD_WORKER_LISTENER_BIND_FAILED)?;
-        // Buffer large pour compenser l'absence de SO_REUSEPORT
-        // Le socket reçoit tout, les workers Tokio se partagent les appels recv_from
         SHARED_UDP_SOCKET.set(Arc::new(udp)).ok();
     }
 
