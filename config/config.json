@@ -1,7 +1,7 @@
 {
   "server": {
     "name": "scloud-dns",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "environment": "production",
     "max_concurrent_requests": 5000,
     "graceful_shutdown_timeout_secs": 15,

@@ -1,29 +1,33 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rust-dns
+  name: scloud-dns
   namespace: scloud-dns
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: rust-dns
+      app: scloud-dns
   template:
     metadata:
       labels:
-        app: rust-dns
+        app: scloud-dns
     spec:
+      serviceAccountName: scloud-dns
+      automountServiceAccountToken: true
       volumes:
         - name: logs
           emptyDir: {}
       containers:
-        - name: rust-dns
-          image: ghcr.io/2scloud/scloud-dns:0.2.1-live-stdout
+        - name: scloud-dns
+          image: ghcr.io/2scloud/scloud-dns:0.2.3-live-stdout
           imagePullPolicy: Always
           resources:
             requests:
+              memory: "256Mi"
               ephemeral-storage: "500Mi"
             limits:
+              memory: "512Mi"
               ephemeral-storage: "1Gi"
           ports:
             - name: dns-udp
@@ -54,18 +58,18 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: rust-dns
+  name: scloud-dns
   namespace: scloud-dns
 spec:
   selector:
-    app: rust-dns
+    app: scloud-dns
   ports:
     - name: dns-udp
       port: 53
-      targetPort: 53
+      targetPort: dns-udp
       protocol: UDP
     - name: dns-tcp
       port: 53
-      targetPort: 53
+      targetPort: dns-tcp
       protocol: TCP
   type: ClusterIP
