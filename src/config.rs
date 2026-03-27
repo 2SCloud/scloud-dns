@@ -447,7 +447,7 @@ impl Default for ServerConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkersConfig {
-    pub listener: u16,
+    pub tcp_acceptor: u16,
     pub decoder: u16,
     pub query_dispatcher: u16,
     pub cache_lookup: u16,
@@ -458,13 +458,12 @@ pub struct WorkersConfig {
     pub sender: u16,
     pub cache_janitor: u16,
     pub metrics: u16,
-    pub tcp_acceptor: u16,
 }
 
 impl Default for WorkersConfig {
     fn default() -> Self {
         WorkersConfig {
-            listener: 5,
+            tcp_acceptor: 1,
             decoder: 5,
             query_dispatcher: 3,
             cache_lookup: 3,
@@ -475,7 +474,6 @@ impl Default for WorkersConfig {
             sender: 5,
             cache_janitor: 1,
             metrics: 2,
-            tcp_acceptor: 1,
         }
     }
 }
