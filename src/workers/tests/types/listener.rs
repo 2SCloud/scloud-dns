@@ -130,14 +130,12 @@ mod tests {
 
         let socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
 
-        let handle = tokio::spawn(
-            workers::types::listener::run_dns_listener_with_socket(
-                worker,
-                socket,
-                vec![rx],
-                vec![tx],
-            )
-        );
+        let handle = tokio::spawn(workers::types::listener::run_dns_listener_with_socket(
+            worker,
+            socket,
+            vec![rx],
+            vec![tx],
+        ));
         handle.abort();
         assert!(handle.await.unwrap_err().is_cancelled());
     }

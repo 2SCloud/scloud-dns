@@ -9,9 +9,9 @@ use tokio::sync::mpsc;
 mod config;
 mod dns;
 mod exceptions;
+mod ui;
 mod utils;
 mod workers;
-mod ui;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 8)]
 async fn main() -> Result<(), SCloudException> {
@@ -19,14 +19,16 @@ async fn main() -> Result<(), SCloudException> {
     utils::logging::init(config.logging.clone())?;
 
     if config.logging.dyn_ui == false {
-        println!(r#"
+        println!(
+            r#"
         ██████╗ ███████╗ ██████╗██╗      ██████╗ ██╗   ██╗██████╗
         ╚════██╗██╔════╝██╔════╝██║     ██╔═══██╗██║   ██║██╔══██╗  scloud-dns (v0.2.3)
          █████╔╝███████╗██║     ██║     ██║   ██║██║   ██║██║  ██║      org: https://github.com/2SCloud/
         ██╔═══╝ ╚════██║██║     ██║     ██║   ██║██║   ██║██║  ██║      rep: https://github.com/2SCloud/scloud-dns
         ███████╗███████║╚██████╗███████╗╚██████╔╝╚██████╔╝██████╔╝      own: @onihilist
         ╚══════╝╚══════╝ ╚═════╝╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝
-        "#);
+        "#
+        );
     } else {
         ratatui::run(|terminal| ui::App::default().run(terminal));
     }
@@ -45,16 +47,19 @@ async fn main() -> Result<(), SCloudException> {
     let gate = Arc::new(StartGate::new(1));
 
     let worker_specs: [(WorkerType, u16); 10] = [
-        (WorkerType::TCP_ACCEPTOR,      config.workers.tcp_acceptor),
-        (WorkerType::QUERY_DISPATCHER,  config.workers.query_dispatcher),
-        (WorkerType::CACHE_LOOKUP,      config.workers.cache_lookup),
-        (WorkerType::ZONE_MANAGER,      config.workers.zone_manager),
-        (WorkerType::RESOLVER,          config.workers.resolver),
-        (WorkerType::CACHE_WRITER,      config.workers.cache_writer),
-        (WorkerType::ENCODER,           config.workers.encoder),
-        (WorkerType::SENDER,            config.workers.sender),
-        (WorkerType::CACHE_JANITOR,     config.workers.cache_janitor),
-        (WorkerType::METRICS,           config.workers.metrics),
+        (WorkerType::TCP_ACCEPTOR, config.workers.tcp_acceptor),
+        (
+            WorkerType::QUERY_DISPATCHER,
+            config.workers.query_dispatcher,
+        ),
+        (WorkerType::CACHE_LOOKUP, config.workers.cache_lookup),
+        (WorkerType::ZONE_MANAGER, config.workers.zone_manager),
+        (WorkerType::RESOLVER, config.workers.resolver),
+        (WorkerType::CACHE_WRITER, config.workers.cache_writer),
+        (WorkerType::ENCODER, config.workers.encoder),
+        (WorkerType::SENDER, config.workers.sender),
+        (WorkerType::CACHE_JANITOR, config.workers.cache_janitor),
+        (WorkerType::METRICS, config.workers.metrics),
     ];
 
     let total = worker_specs.iter().map(|(_, n)| *n as usize).sum();
