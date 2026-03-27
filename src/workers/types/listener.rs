@@ -1,12 +1,12 @@
-use std::sync::Arc;
-use std::time::SystemTime;
-use bytes::Bytes;
-use tokio::net::UdpSocket;
-use tokio::sync::mpsc;
 use crate::exceptions::SCloudException;
 use crate::utils;
 use crate::workers::task::{InFlightTask, SCloudWorkerTask};
 use crate::workers::{SCloudWorker, WorkerState, WorkerType};
+use bytes::Bytes;
+use std::sync::Arc;
+use std::time::SystemTime;
+use tokio::net::UdpSocket;
+use tokio::sync::mpsc;
 
 pub async fn run_dns_listener_with_socket(
     worker: Arc<SCloudWorker>,
@@ -48,7 +48,10 @@ pub async fn run_dns_listener_with_socket(
             correlation_id: None,
         };
 
-        let in_flight = InFlightTask { task, _permit: permit };
+        let in_flight = InFlightTask {
+            task,
+            _permit: permit,
+        };
         forward_task(in_flight, &tx).await;
     }
 }
@@ -93,7 +96,10 @@ pub async fn run_dns_listener_with_shared_socket(
             correlation_id: None,
         };
 
-        let in_flight = InFlightTask { task, _permit: permit };
+        let in_flight = InFlightTask {
+            task,
+            _permit: permit,
+        };
         forward_task(in_flight, &tx).await;
     }
 }

@@ -447,7 +447,7 @@ impl Default for ServerConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkersConfig {
-    pub listener: u16,
+    pub tcp_acceptor: u16,
     pub decoder: u16,
     pub query_dispatcher: u16,
     pub cache_lookup: u16,
@@ -458,13 +458,12 @@ pub struct WorkersConfig {
     pub sender: u16,
     pub cache_janitor: u16,
     pub metrics: u16,
-    pub tcp_acceptor: u16,
 }
 
 impl Default for WorkersConfig {
     fn default() -> Self {
         WorkersConfig {
-            listener: 5,
+            tcp_acceptor: 1,
             decoder: 5,
             query_dispatcher: 3,
             cache_lookup: 3,
@@ -475,7 +474,6 @@ impl Default for WorkersConfig {
             sender: 5,
             cache_janitor: 1,
             metrics: 2,
-            tcp_acceptor: 1,
         }
     }
 }
@@ -485,6 +483,7 @@ pub struct LoggingConfig {
     pub level: LogLevel,
     pub format: LogFormat,
     pub file: String,
+    pub dyn_ui: bool,
     pub rotate: bool,
     pub live_print: bool,
     pub max_size_mb: u64,
@@ -496,6 +495,7 @@ impl Default for LoggingConfig {
             level: LogLevel::INFO,
             format: LogFormat::TEXT,
             file: "/var/log/scloud-dns/scloud-dns.log".to_string(),
+            dyn_ui: false,
             rotate: true,
             live_print: false,
             max_size_mb: 200,

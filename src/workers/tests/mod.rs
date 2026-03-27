@@ -72,7 +72,7 @@ mod tests {
             exceptions::SCloudException::SCLOUD_WORKER_LISTENER_NO_SOCKET
         ));
     }
-    
+
     #[tokio::test]
     async fn test_run_listener_fails_if_tx_not_set() {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::LISTENER).unwrap());

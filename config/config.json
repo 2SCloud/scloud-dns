@@ -13,23 +13,23 @@
     "bind_port": 53
   },
   "workers": {
-    "listener": 4,
+    "tcp_acceptor": 4,
     "decoder": 4,
     "query_dispatcher": 1,
-    "cache_lookup": 0,
-    "zone_manager": 0,
+    "cache_lookup": 3,
+    "zone_manager": 1,
     "resolver": 4,
-    "cache_writer": 0,
+    "cache_writer": 3,
     "encoder": 4,
     "sender": 4,
-    "cache_janitor": 0,
-    "metrics": 1,
-    "tcp_acceptor": 1
+    "cache_janitor": 1,
+    "metrics": 1
   },
   "logging": {
     "level": "debug",
     "format": "text",
     "file": "/var/log/scloud-dns/scloud-dns.log",
+    "dyn_ui": false,
     "rotate": true,
     "live_print": true,
     "max_size_mb": 200
