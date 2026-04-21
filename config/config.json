@@ -14,6 +14,7 @@
   },
   "workers": {
     "tcp_acceptor": 4,
+    "doh_acceptor": 1,
     "decoder": 4,
     "query_dispatcher": 1,
     "cache_lookup": 3,
@@ -108,9 +109,10 @@
   ],
   "doh": {
     "enabled": true,
-    "bind": "0.0.0.0:443",
-    "tls_cert_path": "/etc/scloud/certs/doh.crt",
-    "tls_key_path": "/etc/scloud/certs/doh.key",
+    "bind": "0.0.0.0:8053",
+    "terminate_tls": false,
+    "tls_cert_path": "",
+    "tls_key_path": "",
     "paths": [
       "/dns-query"
     ],

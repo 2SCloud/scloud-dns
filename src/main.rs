@@ -46,8 +46,9 @@ async fn main() -> Result<(), SCloudException> {
 
     let gate = Arc::new(StartGate::new(1));
 
-    let worker_specs: [(WorkerType, u16); 10] = [
+    let worker_specs: [(WorkerType, u16); 11] = [
         (WorkerType::TCP_ACCEPTOR, config.workers.tcp_acceptor),
+        (WorkerType::DOH_ACCEPTOR, config.workers.doh_acceptor),
         (
             WorkerType::QUERY_DISPATCHER,
             config.workers.query_dispatcher,
