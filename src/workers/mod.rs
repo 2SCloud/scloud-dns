@@ -10,6 +10,7 @@ use tokio::sync::{Mutex, MutexGuard, Semaphore, mpsc};
 
 pub(crate) mod manager;
 pub(crate) mod queue;
+pub(crate) mod reply_registry;
 pub(crate) mod task;
 pub(crate) mod tests;
 pub(crate) mod types;
@@ -154,6 +155,11 @@ impl SCloudWorker {
                 self.clone().set_state(WorkerState::IDLE);
                 let tx = self.get_dns_tx().await?;
                 types::tcp_acceptor::run_dns_tcp_acceptor(self.clone(), tx).await?;
+            }
+            WorkerType::DOH_ACCEPTOR => {
+                self.clone().set_state(WorkerState::IDLE);
+                let tx = self.get_dns_tx().await?;
+                types::doh_acceptor::run_dns_doh_acceptor(self.clone(), tx).await?;
             }
             _ => {}
         }
@@ -449,6 +455,7 @@ pub enum WorkerType {
 
     METRICS = 10,
     TCP_ACCEPTOR = 11,
+    DOH_ACCEPTOR = 12,
 }
 
 impl TryFrom<u8> for WorkerType {
@@ -468,6 +475,7 @@ impl TryFrom<u8> for WorkerType {
             9 => WorkerType::CACHE_JANITOR,
             10 => WorkerType::METRICS,
             11 => WorkerType::TCP_ACCEPTOR,
+            12 => WorkerType::DOH_ACCEPTOR,
             99 => WorkerType::NONE,
             // TODO: return an SCloudException
             _ => return Err(()),

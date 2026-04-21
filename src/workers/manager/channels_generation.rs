@@ -1,4 +1,3 @@
-
 use crate::exceptions::SCloudException;
 use crate::workers::{SCloudWorker, WorkerType};
 use std::collections::HashMap;
@@ -23,6 +22,7 @@ pub(crate) async fn generate_channels(
             WorkerType::CACHE_JANITOR => "cache-janitor",
             WorkerType::METRICS => "metrics",
             WorkerType::TCP_ACCEPTOR => "tcp-acceptor",
+            WorkerType::DOH_ACCEPTOR => "doh-acceptor",
             WorkerType::NONE => "none",
         };
         wl.entry(key).or_insert_with(Vec::new).push(Arc::clone(&w));
@@ -30,6 +30,7 @@ pub(crate) async fn generate_channels(
 
     let default_worker = vec![Arc::new(SCloudWorker::new(WorkerType::NONE)?)];
     let tcp_acceptor = wl.get("tcp-acceptor").unwrap_or(&default_worker);
+    let doh_acceptor = wl.get("doh-acceptor").cloned();
     let decoder = wl.get("decoder").unwrap_or(&default_worker);
     let query_dispatcher = wl.get("query-dispatcher").unwrap_or(&default_worker);
     let cache_lookup = wl.get("cache-lookup").unwrap_or(&default_worker);
@@ -58,6 +59,9 @@ pub(crate) async fn generate_channels(
     }
 
     wire(tcp_acceptor, decoder, 1024).await;
+    if let Some(doh) = doh_acceptor.as_deref() {
+        wire(doh, decoder, 1024).await;
+    }
     wire(decoder, cache_lookup, 1024).await;
     wire(cache_lookup, cache_writers, 1024).await; // tx[0] = miss path
     wire(cache_lookup, query_dispatcher, 1024).await; // tx[1] = hit path

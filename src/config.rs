@@ -162,28 +162,30 @@ impl Config {
         }
 
         if self.doh.enabled {
-            if self
-                .doh
-                .tls_cert_path
-                .as_deref()
-                .unwrap_or("")
-                .trim()
-                .is_empty()
-            {
-                return Err(SCloudException::SCLOUD_CONFIG_TLS_MISSING_CERT);
-            }
-            if self
-                .doh
-                .tls_key_path
-                .as_deref()
-                .unwrap_or("")
-                .trim()
-                .is_empty()
-            {
-                return Err(SCloudException::SCLOUD_CONFIG_TLS_MISSING_KEY);
-            }
             if self.doh.paths.is_empty() {
                 return Err(SCloudException::SCLOUD_CONFIG_INVALID_DOH);
+            }
+            if self.doh.terminate_tls {
+                if self
+                    .doh
+                    .tls_cert_path
+                    .as_deref()
+                    .unwrap_or("")
+                    .trim()
+                    .is_empty()
+                {
+                    return Err(SCloudException::SCLOUD_CONFIG_TLS_MISSING_CERT);
+                }
+                if self
+                    .doh
+                    .tls_key_path
+                    .as_deref()
+                    .unwrap_or("")
+                    .trim()
+                    .is_empty()
+                {
+                    return Err(SCloudException::SCLOUD_CONFIG_TLS_MISSING_KEY);
+                }
             }
         }
 
@@ -448,6 +450,8 @@ impl Default for ServerConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkersConfig {
     pub tcp_acceptor: u16,
+    #[serde(default)]
+    pub doh_acceptor: u16,
     pub decoder: u16,
     pub query_dispatcher: u16,
     pub cache_lookup: u16,
@@ -464,6 +468,7 @@ impl Default for WorkersConfig {
     fn default() -> Self {
         WorkersConfig {
             tcp_acceptor: 1,
+            doh_acceptor: 1,
             decoder: 5,
             query_dispatcher: 3,
             cache_lookup: 3,
@@ -652,6 +657,8 @@ pub struct DohConfig {
     pub enabled: bool,
     pub bind: String,
     #[serde(default)]
+    pub terminate_tls: bool,
+    #[serde(default)]
     pub tls_cert_path: Option<String>,
     #[serde(default)]
     pub tls_key_path: Option<String>,
@@ -665,7 +672,8 @@ impl Default for DohConfig {
     fn default() -> Self {
         DohConfig {
             enabled: false,
-            bind: "0.0.0.0:443".to_string(),
+            bind: "0.0.0.0:8053".to_string(),
+            terminate_tls: false,
             tls_cert_path: None,
             tls_key_path: None,
             paths: vec!["/dns-query".to_string()],
