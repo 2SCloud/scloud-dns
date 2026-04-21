@@ -414,7 +414,6 @@ impl Default for Config {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerConfig {
-    pub instance_id: String,
     pub name: String,
     pub version: String,
     pub environment: String,
@@ -433,9 +432,8 @@ pub struct ServerConfig {
 impl Default for ServerConfig {
     fn default() -> Self {
         ServerConfig {
-            instance_id: "default".to_string(),
             name: "scloud-dns".to_string(),
-            version: std::env::var("CARGO_PKG_VERSION").unwrap().to_string(),
+            version: "none".to_string(),
             environment: "production".to_string(),
             max_concurrent_requests: 5000,
             graceful_shutdown_timeout_secs: 15,
