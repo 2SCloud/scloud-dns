@@ -7,7 +7,7 @@ mod tests {
     use tokio::sync::mpsc;
     use tokio::time::{Duration, timeout};
 
-    use crate::{exceptions, workers};
+    use crate::workers;
 
     fn test_worker(max_in_flight: usize) -> Arc<workers::SCloudWorker> {
         let w = Arc::new(workers::SCloudWorker::new(workers::WorkerType::LISTENER).unwrap());
@@ -19,11 +19,8 @@ mod tests {
         worker: &Arc<workers::SCloudWorker>,
     ) -> Vec<tokio::sync::OwnedSemaphorePermit> {
         let mut permits = Vec::new();
-        loop {
-            match worker.in_flight_sem.clone().try_acquire_owned() {
-                Ok(p) => permits.push(p),
-                Err(_) => break,
-            }
+        while let Ok(p) = worker.in_flight_sem.clone().try_acquire_owned() {
+            permits.push(p);
         }
         permits
     }
@@ -105,7 +102,7 @@ mod tests {
 
     #[tokio::test]
     async fn tcp_acceptor_bind_failure_returns_expected_error() {
-        let worker = test_worker(10);
+        let _worker = test_worker(10);
 
         use socket2::{Domain, Protocol, Socket, Type};
         use std::net::SocketAddr;

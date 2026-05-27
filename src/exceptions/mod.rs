@@ -1,4 +1,3 @@
-use crate::dns::q_class::DNSClass;
 use strum_macros::EnumIter;
 
 mod tests;

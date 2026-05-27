@@ -11,7 +11,7 @@ use tokio::sync::mpsc;
 pub async fn run_dns_listener_with_socket(
     worker: Arc<SCloudWorker>,
     socket: UdpSocket,
-    rx: Vec<mpsc::Receiver<InFlightTask>>,
+    _rx: Vec<mpsc::Receiver<InFlightTask>>,
     tx: Vec<mpsc::Sender<InFlightTask>>,
 ) -> Result<(), SCloudException> {
     let mut buf = [0u8; 65_535];
@@ -115,10 +115,10 @@ async fn forward_task(task: InFlightTask, tx: &[mpsc::Sender<InFlightTask>]) -> 
             Err(mpsc::error::TrySendError::Closed(_)) => return false,
         }
     }
-    if let Some(unsent) = current {
-        if let Some(tx_channel) = tx.first() {
-            return tx_channel.send(unsent).await.is_ok();
-        }
+    if let Some(unsent) = current
+        && let Some(tx_channel) = tx.first()
+    {
+        return tx_channel.send(unsent).await.is_ok();
     }
     true
 }

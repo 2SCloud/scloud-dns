@@ -1,12 +1,12 @@
 use crate::exceptions::SCloudException;
 use crate::workers::manager::StartGate;
 use crate::workers::task::InFlightTask;
-use crate::{log_error, log_info, log_sdebug, log_strace};
+use crate::{log_error, log_sdebug};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
-use tokio::sync::{Mutex, MutexGuard, Semaphore, mpsc};
+use tokio::sync::{Mutex, Semaphore, mpsc};
 
 pub(crate) mod manager;
 pub(crate) mod queue;

@@ -98,7 +98,6 @@ async fn handle_request(
     req: Request<Incoming>,
 ) -> Result<Response<Full<Bytes>>, std::convert::Infallible> {
     let method = req.method().clone();
-    let uri_path = req.uri().path().to_string();
     let origin = req
         .headers()
         .get("origin")
@@ -109,24 +108,27 @@ async fn handle_request(
         return Ok(cors_preflight(&ctx, origin.as_deref()));
     }
 
-    if !ctx.paths.contains(&uri_path) {
+    if !ctx.paths.contains(req.uri().path()) {
         return Ok(simple(StatusCode::NOT_FOUND, "unknown doh path"));
     }
 
     let wire = match method {
         Method::GET => match extract_get_dns(&req) {
             Ok(b) => b,
-            Err(resp) => return Ok(resp),
+            Err((status, msg)) => return Ok(simple(status, msg)),
         },
         Method::POST => match extract_post_dns(req).await {
             Ok(b) => b,
-            Err(resp) => return Ok(resp),
+            Err((status, msg)) => return Ok(simple(status, msg)),
         },
         _ => return Ok(simple(StatusCode::METHOD_NOT_ALLOWED, "method not allowed")),
     };
 
     if wire.is_empty() || wire.len() > MAX_DNS_MESSAGE_BYTES {
-        return Ok(simple(StatusCode::BAD_REQUEST, "empty or oversize dns body"));
+        return Ok(simple(
+            StatusCode::BAD_REQUEST,
+            "empty or oversize dns body",
+        ));
     }
 
     let reply = match dispatch_and_wait(&ctx, peer, wire).await {
@@ -144,7 +146,7 @@ async fn handle_request(
     Ok(resp)
 }
 
-fn extract_get_dns(req: &Request<Incoming>) -> Result<Bytes, Response<Full<Bytes>>> {
+fn extract_get_dns(req: &Request<Incoming>) -> Result<Bytes, (StatusCode, &'static str)> {
     let q = req.uri().query().unwrap_or("");
     let mut dns_param: Option<&str> = None;
     for pair in q.split('&') {
@@ -153,17 +155,14 @@ fn extract_get_dns(req: &Request<Incoming>) -> Result<Bytes, Response<Full<Bytes
             break;
         }
     }
-    let dns_b64 = dns_param
-        .ok_or_else(|| simple(StatusCode::BAD_REQUEST, "missing dns query parameter"))?;
+    let dns_b64 = dns_param.ok_or((StatusCode::BAD_REQUEST, "missing dns query parameter"))?;
     URL_SAFE_NO_PAD
         .decode(dns_b64)
         .map(Bytes::from)
-        .map_err(|_| simple(StatusCode::BAD_REQUEST, "invalid base64url dns parameter"))
+        .map_err(|_| (StatusCode::BAD_REQUEST, "invalid base64url dns parameter"))
 }
 
-async fn extract_post_dns(
-    req: Request<Incoming>,
-) -> Result<Bytes, Response<Full<Bytes>>> {
+async fn extract_post_dns(req: Request<Incoming>) -> Result<Bytes, (StatusCode, &'static str)> {
     let ct_ok = req
         .headers()
         .get("content-type")
@@ -171,7 +170,7 @@ async fn extract_post_dns(
         .map(|v| v.starts_with(DNS_MESSAGE_MIME))
         .unwrap_or(false);
     if !ct_ok {
-        return Err(simple(
+        return Err((
             StatusCode::UNSUPPORTED_MEDIA_TYPE,
             "expected application/dns-message",
         ));
@@ -180,7 +179,7 @@ async fn extract_post_dns(
         .into_body()
         .collect()
         .await
-        .map_err(|_| simple(StatusCode::BAD_REQUEST, "failed reading body"))?
+        .map_err(|_| (StatusCode::BAD_REQUEST, "failed reading body"))?
         .to_bytes();
     Ok(body)
 }
@@ -211,7 +210,10 @@ async fn dispatch_and_wait(
         reply_to: Some(reply_registry::REPLY_TAG_DOH.to_string()),
         correlation_id: None,
     };
-    let in_flight = InFlightTask { task, _permit: permit };
+    let in_flight = InFlightTask {
+        task,
+        _permit: permit,
+    };
 
     let rx = reply_registry::register(task_id);
 
@@ -240,12 +242,12 @@ async fn forward_task(task: InFlightTask, tx: &[mpsc::Sender<InFlightTask>]) -> 
             Err(mpsc::error::TrySendError::Closed(_)) => return false,
         }
     }
-    if let Some(unsent) = current {
-        if let Some(first) = tx.first() {
-            return first.send(unsent).await.is_ok();
-        }
+    // Every channel was full; fall back to a blocking send on the first one.
+    let Some(unsent) = current else { return true };
+    match tx.first() {
+        Some(first) => first.send(unsent).await.is_ok(),
+        None => false,
     }
-    true
 }
 
 fn simple(status: StatusCode, msg: &str) -> Response<Full<Bytes>> {
@@ -272,11 +274,10 @@ fn apply_cors(resp: &mut Response<Full<Bytes>>, ctx: &DohHandlerCtx, origin: Opt
     if ctx.allowed_origins.is_empty() {
         return;
     }
-    if let Some(o) = origin {
-        if ctx.allowed_origins.contains(o) {
-            if let Ok(v) = o.parse() {
-                resp.headers_mut().insert("Access-Control-Allow-Origin", v);
-            }
-        }
+    if let Some(o) = origin
+        && ctx.allowed_origins.contains(o)
+        && let Ok(v) = o.parse()
+    {
+        resp.headers_mut().insert("Access-Control-Allow-Origin", v);
     }
 }

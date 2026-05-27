@@ -82,7 +82,7 @@ mod tests {
         logging::log(LogLevel::ERROR, "tests/logging.rs", "boom");
         let after_lines = read_lines(&path).len();
 
-        assert!(after_lines >= before_lines + 1);
+        assert!(after_lines > before_lines);
     }
 
     #[test]

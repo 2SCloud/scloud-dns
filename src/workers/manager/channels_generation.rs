@@ -25,7 +25,7 @@ pub(crate) async fn generate_channels(
             WorkerType::DOH_ACCEPTOR => "doh-acceptor",
             WorkerType::NONE => "none",
         };
-        wl.entry(key).or_insert_with(Vec::new).push(Arc::clone(&w));
+        wl.entry(key).or_default().push(Arc::clone(&w));
     }
 
     let default_worker = vec![Arc::new(SCloudWorker::new(WorkerType::NONE)?)];

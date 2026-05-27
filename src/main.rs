@@ -1,10 +1,17 @@
+// DNS record types and the worker/state enums use the protocol's standard
+// uppercase names (A, AAAA, CNAME, TCP, ...); renaming them would hide the
+// spec, so the acronym lint is allowed crate-wide.
+#![allow(clippy::upper_case_acronyms)]
+// The DNS protocol library and worker API are intentionally built ahead of the
+// runtime that wires them together (pre-1.0); silence dead-code noise.
+#![allow(dead_code)]
+
 use crate::config::Config;
 use crate::exceptions::SCloudException;
 use crate::workers::manager::StartGate;
 use crate::workers::{SCloudWorker, WorkerType};
 use std::path::Path;
 use std::sync::Arc;
-use tokio::sync::mpsc;
 
 mod config;
 mod dns;
@@ -18,11 +25,11 @@ async fn main() -> Result<(), SCloudException> {
     let config = Config::from_file(Path::new("./config/config.json"))?;
     utils::logging::init(config.logging.clone())?;
 
-    if config.logging.dyn_ui == false {
+    if !config.logging.dyn_ui {
         println!(
             r#"
         ██████╗ ███████╗ ██████╗██╗      ██████╗ ██╗   ██╗██████╗
-        ╚════██╗██╔════╝██╔════╝██║     ██╔═══██╗██║   ██║██╔══██╗  scloud-dns (v0.2.3)
+        ╚════██╗██╔════╝██╔════╝██║     ██╔═══██╗██║   ██║██╔══██╗  scloud-dns (v0.3.0)
          █████╔╝███████╗██║     ██║     ██║   ██║██║   ██║██║  ██║      org: https://github.com/2SCloud/
         ██╔═══╝ ╚════██║██║     ██║     ██║   ██║██║   ██║██║  ██║      rep: https://github.com/2SCloud/scloud-dns
         ███████╗███████║╚██████╗███████╗╚██████╔╝╚██████╔╝██████╔╝      own: @onihilist
@@ -30,7 +37,7 @@ async fn main() -> Result<(), SCloudException> {
         "#
         );
     } else {
-        ratatui::run(|terminal| ui::App::default().run(terminal));
+        let _ = ratatui::run(|terminal| ui::App::default().run(terminal));
     }
 
     //#[cfg(target_os = "windows")]
@@ -72,7 +79,7 @@ async fn main() -> Result<(), SCloudException> {
         }
     }
 
-    workers::manager::channels_generation::generate_channels(workers.clone()).await;
+    workers::manager::channels_generation::generate_channels(workers.clone()).await?;
     workers.sort_by_key(|w| w.get_worker_id());
 
     let mut handles: Vec<tokio::task::JoinHandle<()>> = Vec::new();

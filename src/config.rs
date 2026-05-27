@@ -12,7 +12,7 @@ use std::fs;
 use std::path::Path;
 
 /// Top-level configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
     pub server: ServerConfig,
@@ -245,21 +245,24 @@ impl Config {
                         }
                     }
 
-                    if let Some(acl) = z.notify_acl.as_deref() {
-                        if !acl.trim().is_empty() && !is_acl_ref_valid(acl) {
-                            return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE);
-                        }
+                    if let Some(acl) = z.notify_acl.as_deref()
+                        && !acl.trim().is_empty()
+                        && !is_acl_ref_valid(acl)
+                    {
+                        return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE);
                     }
-                    if let Some(acl) = z.allow_transfer_acl.as_deref() {
-                        if !acl.trim().is_empty() && !is_acl_ref_valid(acl) {
-                            return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE);
-                        }
+                    if let Some(acl) = z.allow_transfer_acl.as_deref()
+                        && !acl.trim().is_empty()
+                        && !is_acl_ref_valid(acl)
+                    {
+                        return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE);
                     }
 
-                    if let Some(k) = z.axfr_tsig_key.as_deref() {
-                        if !k.trim().is_empty() && !tsig_names.contains(k) {
-                            return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_TSIG_KEY);
-                        }
+                    if let Some(k) = z.axfr_tsig_key.as_deref()
+                        && !k.trim().is_empty()
+                        && !tsig_names.contains(k)
+                    {
+                        return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_TSIG_KEY);
                     }
                 }
                 ZoneType::Slave => {
@@ -326,10 +329,11 @@ impl Config {
             if d.acl.trim().is_empty() || !is_acl_ref_valid(&d.acl) {
                 return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_ACL_REFERENCE);
             }
-            if let Some(k) = d.tsig_key.as_deref() {
-                if !k.trim().is_empty() && !tsig_names.contains(k) {
-                    return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_TSIG_KEY);
-                }
+            if let Some(k) = d.tsig_key.as_deref()
+                && !k.trim().is_empty()
+                && !tsig_names.contains(k)
+            {
+                return Err(SCloudException::SCLOUD_CONFIG_UNKNOWN_TSIG_KEY);
             }
 
             if !zone_names.contains(d.zone.as_str()) {
@@ -378,37 +382,6 @@ impl Config {
         }
 
         Err(SCloudException::SCLOUD_CONFIG_IMPOSSIBLE_TO_PARSE_ADDR)
-    }
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            server: ServerConfig::default(),
-            workers: WorkersConfig::default(),
-            logging: LoggingConfig::default(),
-            metrics: MetricsConfig::default(),
-            admin: AdminConfig::default(),
-            acl: Vec::new(),
-            listener: Vec::new(),
-            doh: DohConfig::default(),
-            forwarder: Vec::new(),
-            root_hints: RootHintsConfig::default(),
-            cache: CacheConfig::default(),
-            recursion: RecursionConfig::default(),
-            ratelimit: RateLimitConfig::default(),
-            zone: Vec::new(),
-            tsig_key: Vec::new(),
-            axfr: AxfrConfig::default(),
-            dnssec: DnssecConfig::default(),
-            policy: PolicyConfig::default(),
-            amplification_mitigation: AmplificationMitigationConfig::default(),
-            tuning: TuningConfig::default(),
-            view: Vec::new(),
-            monitoring: MonitoringConfig::default(),
-            dynupdate: Vec::new(),
-            limits: LimitsConfig::default(),
-        }
     }
 }
 
@@ -929,18 +902,10 @@ impl Default for DnssecConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PolicyConfig {
     #[serde(default)]
     pub deny_domains: Vec<String>,
-}
-
-impl Default for PolicyConfig {
-    fn default() -> Self {
-        PolicyConfig {
-            deny_domains: Vec::new(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
