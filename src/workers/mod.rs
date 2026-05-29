@@ -101,7 +101,9 @@ impl SCloudWorker {
         }
         match WorkerType::try_from(self.worker_type.load(Ordering::Relaxed)).unwrap() {
             WorkerType::LISTENER => {
-                return Err(SCloudException::SCLOUD_WORKER_LISTENER_NO_SOCKET);
+                self.clone().set_state(WorkerState::IDLE);
+                let tx = self.get_dns_tx().await?;
+                types::listener::run_dns_listener(self.clone(), tx).await?;
             }
             WorkerType::DECODER => {
                 self.clone().set_state(WorkerState::IDLE);

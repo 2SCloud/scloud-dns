@@ -422,6 +422,10 @@ impl Default for ServerConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkersConfig {
+    /// Number of UDP listener workers. Each binds the same port with
+    /// SO_REUSEPORT so the kernel load-balances datagrams across them.
+    #[serde(default = "default_listener_workers")]
+    pub listener: u16,
     pub tcp_acceptor: u16,
     #[serde(default)]
     pub doh_acceptor: u16,
@@ -437,9 +441,14 @@ pub struct WorkersConfig {
     pub metrics: u16,
 }
 
+fn default_listener_workers() -> u16 {
+    4
+}
+
 impl Default for WorkersConfig {
     fn default() -> Self {
         WorkersConfig {
+            listener: 4,
             tcp_acceptor: 1,
             doh_acceptor: 1,
             decoder: 5,

@@ -29,6 +29,7 @@ pub(crate) async fn generate_channels(
     }
 
     let default_worker = vec![Arc::new(SCloudWorker::new(WorkerType::NONE)?)];
+    let listener = wl.get("listener").cloned();
     let tcp_acceptor = wl.get("tcp-acceptor").unwrap_or(&default_worker);
     let doh_acceptor = wl.get("doh-acceptor").cloned();
     let decoder = wl.get("decoder").unwrap_or(&default_worker);
@@ -59,6 +60,9 @@ pub(crate) async fn generate_channels(
     }
 
     wire(tcp_acceptor, decoder, 1024).await;
+    if let Some(udp) = listener.as_deref() {
+        wire(udp, decoder, 1024).await;
+    }
     if let Some(doh) = doh_acceptor.as_deref() {
         wire(doh, decoder, 1024).await;
     }
