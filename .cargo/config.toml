@@ -1,0 +1,8 @@
+[target.'cfg(target_os = "linux")']
+runner = "sudo -E"
+
+[target.'cfg(target_os = "macos")']
+runner = "sudo -E"
+
+[target.'cfg(target_os = "windows")']
+runner = "powershell -Command Start-Process -Verb RunAs"
