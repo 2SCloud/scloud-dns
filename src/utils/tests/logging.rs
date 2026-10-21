@@ -32,6 +32,7 @@ mod tests {
             let cfg = LoggingConfig {
                 file: log_path.to_string_lossy().to_string(),
                 level: LogLevel::TRACE,
+                dyn_ui: false,
                 live_print: false,
                 rotate: false,
                 max_size_mb: 1,

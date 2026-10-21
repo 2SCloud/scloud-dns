@@ -95,7 +95,8 @@ mod tests {
     fn test_doh_config_defaults() {
         let doh = DohConfig::default();
         assert_eq!(doh.enabled, false);
-        assert_eq!(doh.bind, "0.0.0.0:443");
+        assert_eq!(doh.bind, "0.0.0.0:8053");
+        assert_eq!(doh.terminate_tls, false);
         assert_eq!(doh.paths, vec!["/dns-query"]);
     }
 
