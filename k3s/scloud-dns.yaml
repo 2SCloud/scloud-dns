@@ -20,7 +20,7 @@ spec:
           emptyDir: {}
       containers:
         - name: scloud-dns
-          image: ghcr.io/2scloud/scloud-dns:0.3.0.1
+          image: ghcr.io/2scloud/scloud-dns:0.3.0-1
           imagePullPolicy: Always
           resources:
             requests:
