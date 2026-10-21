@@ -62,8 +62,7 @@ pub async fn start_otlp_logger() {
         .build()
         .expect("reqwest client");
 
-    // let url = "http://alloy.scloud-observability.svc:4318/v1/logs";
-    let url = "http://localhost:4318/v1/logs";
+    let url = "http://alloy.scloud-observability.svc.cluster.local:4318/v1/logs";
 
     let (_shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     run_otlp_logger(rx, shutdown_rx, client, url, MAX_BATCH, FLUSH_EVERY).await;
