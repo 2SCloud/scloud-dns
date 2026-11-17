@@ -45,14 +45,19 @@ last_release() {
 }
 
 # Highest bump in a revision range: major | minor | patch | none
+# The bot's own "chore(release): ..." commits are ignored (a human commit with
+# that prefix still counts).
 bump_level() {
-    git log --no-merges --format='%x1e%s%n%b' "$1" | awk '
+    git log --no-merges --format='%x1e%an%n%s%n%b' "$1" | awk '
         BEGIN { RS = "\036"; lvl = 0 }
         NF == 0 { next }
         {
             n = index($0, "\n")
-            subject = n ? substr($0, 1, n - 1) : $0
-            if (subject ~ /^chore\(release\): /) next
+            author = substr($0, 1, n - 1)
+            rest = substr($0, n + 1)
+            m = index(rest, "\n")
+            subject = m ? substr(rest, 1, m - 1) : rest
+            if (subject ~ /^chore\(release\): / && author ~ /\[bot\]$/) next
             if (subject ~ /^[A-Za-z]+(\([^)]*\))?!:/ || $0 ~ /BREAKING[ -]CHANGE:/) l = 3
             else if (subject ~ /^[Ff]eat(\([^)]*\))?:/) l = 2
             else l = 1

@@ -35,10 +35,13 @@ concurrency:
 jobs:
   version:
     name: ${{ github.ref_name == 'main' && 'Release' || 'Beta' }} version
+    # Skips the bot's own pushes ("chore(release): ..." commits authored by a bot),
+    # not a human merge titled the same way
     if: >-
       github.event_name != 'pull_request' &&
       (github.ref_name == 'main' || github.ref_name == 'develop') &&
-      !startsWith(github.event.head_commit.message, 'chore(release):')
+      !(startsWith(github.event.head_commit.message, 'chore(release):') &&
+        endsWith(github.event.head_commit.author.name, '[bot]'))
     runs-on: ubuntu-latest
 
     steps:
