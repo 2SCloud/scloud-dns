@@ -15,6 +15,11 @@ jobs:
   coverage:
     name: Coverage (${{ matrix.os_label }})
     runs-on: ${{ matrix.os }}
+    env:
+      # The tests don't need root. Running them through the `sudo -E` runner of
+      # .cargo/config.toml loses LLVM_PROFILE_FILE on recent Ubuntu runners, so
+      # no coverage data (*.profraw) is written: run the test binaries directly.
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER: env
     strategy:
       fail-fast: false
       matrix:
