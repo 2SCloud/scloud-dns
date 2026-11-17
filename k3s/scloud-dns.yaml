@@ -20,7 +20,7 @@ spec:
           emptyDir: {}
       containers:
         - name: scloud-dns
-          image: ghcr.io/2scloud/scloud-dns:0.3.1-beta.2
+          image: ghcr.io/2scloud/scloud-dns:0.3.1
           imagePullPolicy: Always
           resources:
             requests:
@@ -49,7 +49,7 @@ spec:
             - name: OTEL_EXPORTER_OTLP_LOGS_PROTOCOL
               value: "http/protobuf"
             - name: OTEL_RESOURCE_ATTRIBUTES
-              value: "service.namespace=scloud-dns,service.version=0.3.1-beta.2"
+              value: "service.namespace=scloud-dns,service.version=0.3.1"
             - name: OTEL_TRACES_EXPORTER
               value: "none"
             - name: OTEL_METRICS_EXPORTER
