@@ -2,8 +2,8 @@ name: Version
 
 # Computes the next version from the conventional commits since the last release
 # (feat → minor, fix/anything else → patch, "type!:" or "BREAKING CHANGE:" → major):
-#   pull request    → tag X.Y.Z-alpha.N on the PR head                     (alpha)
-#   push on develop → "chore(release): X.Y.Z-beta.N" commit + tag          (beta)
+#   pull request    → tag X.Y.Z-alpha.<build number> on the PR head        (alpha)
+#   push on develop → "chore(release): X.Y.Z-beta.<build number>" commit + tag (beta)
 #   push on main    → "chore(release): X.Y.Z" commit + tag, then main is
 #                     merged back into develop                             (release)
 # The commit writes the version into the project files (Cargo.toml...), so the
@@ -72,6 +72,9 @@ jobs:
         id: release
         env:
           BRANCH: ${{ github.ref_name }}
+          # Unique per run of this workflow, kept by a re-run (betas only: a
+          # release is X.Y.Z): X.Y.Z-beta.<build> points to its CI run
+          BUILD: ${{ github.run_number }}
         run: |
           set -euo pipefail
 
@@ -79,10 +82,21 @@ jobs:
           label=Beta
           if [[ "$BRANCH" == "main" ]]; then channel=stable; label=Release; fi
 
-          version="$(.github/scripts/version.sh next "$channel")"
+          version="$(.github/scripts/version.sh next "$channel" "$BUILD")"
           if [[ -z "$version" ]]; then
             echo "::notice::Nothing to release on ${BRANCH}"
             exit 0
+          fi
+
+          # A re-run keeps its build number: if its version was already pushed (on
+          # the version commit made on top of this one), there is nothing left to do
+          if git rev-parse -q --verify "refs/tags/${version}" >/dev/null; then
+            if git merge-base --is-ancestor HEAD "refs/tags/${version}"; then
+              echo "::notice::${version} was already released by a previous attempt of this run"
+              exit 0
+            fi
+            echo "::error::Tag ${version} already exists elsewhere: the build numbers restart at 1 when version.yml is renamed"
+            exit 1
           fi
 
           head="$(git rev-parse HEAD)"
@@ -197,36 +211,34 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
-      - name: Tag the next alpha
+      - name: Tag the alpha
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
           PR: ${{ github.event.pull_request.number }}
+          # Unique per run of this workflow, kept by a re-run (which then finds
+          # the commit already tagged): X.Y.Z-alpha.<build> points to its CI run
+          BUILD: ${{ github.run_number }}
         run: |
           set -euo pipefail
+
+          version="$(.github/scripts/version.sh next alpha "$BUILD")"
+          if [[ -z "$version" ]]; then
+            echo "::notice::This commit already has a version: no alpha"
+            exit 0
+          fi
 
           user_id="$(gh api "/users/${APP_SLUG}[bot]" --jq .id)"
           git config user.name "${APP_SLUG}[bot]"
           git config user.email "${user_id}+${APP_SLUG}[bot]@users.noreply.github.com"
 
-          # Several PRs can race for the same alpha number: retry with the next one
-          for attempt in 1 2 3 4 5; do
-            version="$(.github/scripts/version.sh next alpha)"
-            if [[ -z "$version" ]]; then
-              echo "::notice::This commit already has a version: no alpha"
-              exit 0
-            fi
+          # Same tag on this commit is caught above, so an existing tag is on another one
+          if git rev-parse -q --verify "refs/tags/${version}" >/dev/null; then
+            echo "::error::Tag ${version} already exists on another commit: the build numbers restart at 1 when version.yml is renamed"
+            exit 1
+          fi
 
-            git tag -a "$version" -m "Alpha ${version} (PR #${PR})"
-            if git push origin "refs/tags/${version}"; then
-              echo "### PR #${PR} → \`${version}\`" >> "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
+          git tag -a "$version" -m "Alpha ${version} (PR #${PR})"
+          git push origin "refs/tags/${version}"
 
-            git tag -d "$version"
-            sleep $(( attempt * 2 ))
-            git fetch --tags --force origin
-          done
-
-          echo "::error::Could not push an alpha tag after 5 attempts"
-          exit 1
+          echo "### PR #${PR} → \`${version}\`" >> "$GITHUB_STEP_SUMMARY"
