@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Version helpers shared by the Version and Release workflows.
 #
-#   version.sh next stable|beta|alpha   next version for HEAD, from the conventional
-#                                       commits since the last release (prints
+#   version.sh next stable              next version for HEAD, from the conventional
+#   version.sh next beta|alpha <build>  commits since the last release (prints
 #                                       nothing when there is nothing to release)
 #   version.sh apply <version>          writes <version> into the versioned files
 #   version.sh current [<rev>]          version written in the files at <rev> (HEAD)
@@ -10,8 +10,9 @@
 #   version.sh previous <tag>           last release older than <tag> (release notes)
 #   version.sh prerelease <tag>         exit 0 when <tag> is a pre-release (1.2.0-beta.3)
 #
-# Tags: 1.2.3 = release (main), 1.2.3-beta.N = beta (develop), 1.2.3-alpha.N =
-# alpha (pull requests). Legacy 1.2.3-N tags are releases right after 1.2.3.
+# Tags: 1.2.3 = release (main), 1.2.3-beta.B = beta (develop), 1.2.3-alpha.B =
+# alpha (pull requests), B being the CI build number. Legacy 1.2.3-N tags are
+# releases right after 1.2.3.
 # Bump: "type!:" or "BREAKING CHANGE:" → major, "feat:" → minor, anything else → patch.
 
 set -euo pipefail
@@ -67,7 +68,7 @@ bump_level() {
 }
 
 next_version() {
-    local channel="$1" here done_re last level base major minor patch target n
+    local channel="$1" build="${2:-}" here done_re last level base major minor patch target
 
     # HEAD already versioned for this channel (or a higher one): nothing to do.
     # An alpha on HEAD (fast-forwarded PR) does not prevent its beta or release.
@@ -77,6 +78,11 @@ next_version() {
         alpha)  done_re="$VERSION_RE" ;;
         *) echo "Unknown channel: ${channel} (stable, beta or alpha)" >&2; return 2 ;;
     esac
+
+    if [[ "$channel" != "stable" && ! "$build" =~ ^[0-9]+$ ]]; then
+        echo "A ${channel} needs the CI build number: next ${channel} <build>" >&2
+        return 2
+    fi
 
     here="$(git tag --points-at HEAD)"
     if grep -qE "$done_re" <<< "$here"; then return 0; fi
@@ -96,11 +102,10 @@ next_version() {
 
     if [[ "$channel" == "stable" ]]; then
         echo "$target"
-        return 0
+    else
+        # Unique per CI run: two runs never get the same pre-release
+        echo "${target}-${channel}.${build}"
     fi
-
-    n="$(git tag -l "${target}-${channel}.*" | sed -nE "s/^${target//./\\.}-${channel}\.([0-9]+)$/\1/p" | sort -n | tail -n1)"
-    echo "${target}-${channel}.$(( ${n:-0} + 1 ))"
 }
 
 apply_version() {
@@ -142,14 +147,14 @@ previous_release() {
 }
 
 case "${1:-}" in
-    next)       next_version "${2:?stable|beta|alpha}" ;;
+    next)       next_version "${2:?stable|beta|alpha}" "${3:-}" ;;
     apply)      apply_version "${2:?version}" ;;
     current)    current_version "${2:-HEAD}" ;;
     newer)      newer "${2:?version}" "${3:?version}" ;;
     previous)   previous_release "${2:?tag}" ;;
     prerelease) [[ "${2:?tag}" =~ -[A-Za-z] ]] ;;
     *)
-        echo "usage: $0 next stable|beta|alpha | apply <version> | current [<rev>] | newer <a> <b> | previous <tag> | prerelease <tag>" >&2
+        echo "usage: $0 next stable | next beta|alpha <build> | apply <version> | current [<rev>] | newer <a> <b> | previous <tag> | prerelease <tag>" >&2
         exit 2
         ;;
 esac
