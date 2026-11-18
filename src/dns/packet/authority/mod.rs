@@ -50,7 +50,7 @@ impl AuthoritySection {
         buf: &[u8],
         offset: usize,
     ) -> Result<(AuthoritySection, usize), SCloudException> {
-        let (q_name, mut pos) = parse_qname(buf, offset).unwrap();
+        let (q_name, mut pos) = parse_qname(buf, offset)?;
 
         if buf.len() < pos + 10 {
             return Err(SCloudException::SCLOUD_AUTHORITY_DESERIALIZATION_FAILED_BUF_TOO_SHORT);
@@ -74,7 +74,7 @@ impl AuthoritySection {
             );
         }
 
-        let (ns_name, _) = parse_qname(buf, pos).unwrap();
+        let (ns_name, _) = parse_qname(buf, pos)?;
 
         pos += rdlength as usize;
 
