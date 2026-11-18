@@ -1759,7 +1759,7 @@ dependencies = [
 
 [[package]]
 name = "scloud-dns"
-version = "0.3.2-beta.1"
+version = "0.3.2-beta.19"
 dependencies = [
  "anyhow",
  "base64",
