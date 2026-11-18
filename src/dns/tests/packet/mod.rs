@@ -15,6 +15,25 @@ mod tests {
     use crate::dns::q_type::DNSRecordType;
 
     #[test]
+    fn test_dns_packet_from_bytes_rejects_compression_loop() {
+        use crate::exceptions::SCloudException;
+
+        // Query whose QNAME is a compression pointer to its own offset (12).
+        // Before the fix, decoding it overflowed the stack and aborted the process.
+        let bytes: &[u8] = &[
+            0xAA, 0xAA, 0x01, 0x00, // ID, flags
+            0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // QDCOUNT = 1
+            0xC0, 0x0C, // QNAME: pointer to offset 12
+            0x00, 0x01, 0x00, 0x01, // QTYPE = A, QCLASS = IN
+        ];
+
+        assert!(matches!(
+            DNSPacket::from_bytes(bytes),
+            Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_QNAME_COMPRESSION_FAILED)
+        ));
+    }
+
+    #[test]
     fn test_dns_packet_from_bytes() {
         let bytes: &[u8] = &[
             // ===== DNS HEADER =====
