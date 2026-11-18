@@ -1,0 +1,215 @@
+name: Release
+
+# On a version tag (pushed by the Version workflow, by hand, or from a GitHub release):
+#   1. stamps the version and publishes ghcr.io/2scloud/scloud-dns:<tag>
+#   2. creates the GitHub release (pre-release for X.Y.Z-beta.N) if missing
+#   3. notifies scloud-install, whose "Update stack" workflow opens the PR
+#      bumping scloud-dns in stack.yml (releases) / stack-beta.yml (betas)
+# Alphas (X.Y.Z-alpha.N, from pull requests) only get the image and a comment
+# on their PR: no GitHub release, no scloud-install PR.
+#
+# Setup (org-level is easiest, shared with scloud-install):
+#   - variable SCLOUD_BOT_CLIENT_ID  : Client ID of the 2SCloud bot GitHub App
+#   - secret   SCLOUD_BOT_PRIVATE_KEY: private key of that GitHub App
+#   The App needs Contents + Pull requests (read & write) and must be installed
+#   on scloud-dns and scloud-install.
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing git tag to (re)publish
+        required: true
+        type: string
+      notify_install:
+        description: Notify scloud-install (stack PR)
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/2scloud/scloud-dns
+  COMPONENT: scloud-dns
+  INSTALL_REPO: scloud-install
+
+jobs:
+  image:
+    name: Publish ghcr.io image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # GitHub release
+      packages: write
+      pull-requests: write   # alpha comment
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      alpha: ${{ steps.tag.outputs.alpha }}
+      digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Resolve tag
+        id: tag
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if [[ ! "$TAG" =~ ^[0-9A-Za-z_][0-9A-Za-z_.-]{0,127}$ ]]; then
+            echo "::error::Invalid tag: must match [0-9A-Za-z_][0-9A-Za-z_.-]{0,127} to be a valid image tag"
+            exit 1
+          fi
+          alpha=false
+          if [[ "$TAG" == *-alpha.* ]]; then alpha=true; fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "alpha=$alpha" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          ref: refs/tags/${{ steps.tag.outputs.tag }}
+          fetch-depth: 0
+
+      - name: Stamp version
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          if [[ ! -x .github/scripts/version.sh ]]; then
+            echo "::notice::No version script at ${TAG}: files left as they are"
+          elif ! .github/scripts/version.sh apply "$TAG"; then
+            echo "::warning::${TAG} is not a X.Y.Z[-suffix] version: files left as they are"
+          fi
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          context: git
+          images: ${{ env.IMAGE }}
+          flavor: latest=false
+          tags: type=raw,value=${{ steps.tag.outputs.tag }}
+
+      - name: Build & push
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: GitHub release
+        if: steps.tag.outputs.alpha != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::notice::Release ${TAG} already exists"
+            exit 0
+          fi
+
+          args=(--verify-tag --generate-notes --title "$TAG")
+          if [[ -x .github/scripts/version.sh ]]; then
+            if .github/scripts/version.sh prerelease "$TAG"; then
+              args+=(--prerelease)
+            fi
+            previous="$(.github/scripts/version.sh previous "$TAG")"
+            if [[ -n "$previous" ]]; then
+              args+=(--notes-start-tag "$previous")
+            fi
+          fi
+
+          gh release create "$TAG" "${args[@]}"
+
+      - name: Comment on the pull request
+        if: steps.tag.outputs.alpha == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          # The Version workflow writes "Alpha <tag> (PR #<number>)" in the tag message
+          git fetch -q --force origin "refs/tags/${TAG}:refs/tags/${TAG}"
+          message="$(git for-each-ref --format='%(contents:subject)' "refs/tags/${TAG}")"
+          if [[ ! "$message" =~ \(PR\ \#([0-9]+)\) ]]; then
+            echo "::notice::${TAG} is not linked to a pull request"
+            exit 0
+          fi
+          pr="${BASH_REMATCH[1]}"
+
+          marker="<!-- scloud-dns-alpha -->"
+          body="${marker}
+          **Alpha \`${TAG}\`** published for $(git rev-parse --short HEAD)
+
+          - Image: \`${IMAGE}:${TAG}\`
+          - Deploy: \`SCLOUD_DNS_VERSION=${TAG} ./install.sh\`"
+
+          id="$(gh api "repos/${GH_REPO}/issues/${pr}/comments" --paginate \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"${marker}\"))) | .id" | tail -n1)"
+
+          if [[ -n "$id" ]]; then
+            gh api -X PATCH "repos/${GH_REPO}/issues/comments/${id}" -f body="$body" >/dev/null
+          else
+            gh api "repos/${GH_REPO}/issues/${pr}/comments" -f body="$body" >/dev/null
+          fi
+
+      - name: Summary
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          {
+            echo "### Published \`${IMAGE}:${TAG}\`"
+            echo
+            echo "Digest: \`${DIGEST}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  notify-install:
+    name: Notify scloud-install
+    needs: image
+    if: >-
+      needs.image.outputs.alpha != 'true' &&
+      (github.event_name == 'push' || inputs.notify_install)
+    runs-on: ubuntu-latest
+    permissions: {}
+
+    steps:
+      - name: Bot token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.SCLOUD_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.SCLOUD_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ env.INSTALL_REPO }}
+          permission-contents: write
+
+      - name: Send component-released
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TARGET: ${{ github.repository_owner }}/${{ env.INSTALL_REPO }}
+          TAG: ${{ needs.image.outputs.tag }}
+        run: |
+          gh api "repos/${TARGET}/dispatches" \
+            -f event_type=component-released \
+            -f "client_payload[component]=${COMPONENT}" \
+            -f "client_payload[version]=${TAG}"
+          echo "### Notified ${TARGET}: ${COMPONENT} ${TAG}" >> "$GITHUB_STEP_SUMMARY"

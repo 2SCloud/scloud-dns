@@ -1,0 +1,232 @@
+name: Version
+
+# Computes the next version from the conventional commits since the last release
+# (feat → minor, fix/anything else → patch, "type!:" or "BREAKING CHANGE:" → major):
+#   pull request    → tag X.Y.Z-alpha.N on the PR head                     (alpha)
+#   push on develop → "chore(release): X.Y.Z-beta.N" commit + tag          (beta)
+#   push on main    → "chore(release): X.Y.Z" commit + tag, then main is
+#                     merged back into develop                             (release)
+# The commit writes the version into the project files (Cargo.toml...), so the
+# sources of a release or pre-release show its version. Alphas only stamp it in
+# their image. Tags are pushed by the 2SCloud bot, so they trigger the Release
+# workflow. A commit that already has a version gets no alpha.
+#
+# Merging main back into develop after each release keeps the version lines of
+# the two branches from conflicting (develop keeps its newer beta version).
+#
+# Setup: the GitHub App of release.yml must also be installed on scloud-dns and
+# be a bypass actor of the main ruleset (it pushes the release commit). Without
+# the bypass, the tag goes on the merge commit and only the image is versioned.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    types: [opened, reopened, synchronize]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: version-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: ${{ github.ref_name == 'main' && 'Release' || 'Beta' }} version
+    # Skips the bot's own pushes ("chore(release): ..." commits authored by a bot),
+    # not a human merge titled the same way
+    if: >-
+      github.event_name != 'pull_request' &&
+      (github.ref_name == 'main' || github.ref_name == 'develop') &&
+      !(startsWith(github.event.head_commit.message, 'chore(release):') &&
+        endsWith(github.event.head_commit.author.name, '[bot]'))
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Bot token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.SCLOUD_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.SCLOUD_BOT_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+
+      - name: Bot identity
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          user_id="$(gh api "/users/${APP_SLUG}[bot]" --jq .id)"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${user_id}+${APP_SLUG}[bot]@users.noreply.github.com"
+
+      - name: Commit & tag the next version
+        id: release
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          channel=beta
+          label=Beta
+          if [[ "$BRANCH" == "main" ]]; then channel=stable; label=Release; fi
+
+          version="$(.github/scripts/version.sh next "$channel")"
+          if [[ -z "$version" ]]; then
+            echo "::notice::Nothing to release on ${BRANCH}"
+            exit 0
+          fi
+
+          head="$(git rev-parse HEAD)"
+          .github/scripts/version.sh apply "$version"
+          if ! git diff --quiet; then
+            git commit -qam "chore(release): ${version}"
+          fi
+          git tag -a "$version" -m "${label} ${version}"
+
+          if git push --atomic origin "HEAD:refs/heads/${BRANCH}" "refs/tags/${version}"; then
+            echo "version=${version}" >> "$GITHUB_OUTPUT"
+            echo "### ${BRANCH} → \`${version}\`" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          git fetch -q origin "$BRANCH"
+          if [[ "$(git rev-parse FETCH_HEAD)" != "$head" ]]; then
+            echo "::notice::${BRANCH} moved during this run: the run of the newer push releases it"
+            exit 0
+          fi
+
+          echo "::warning::Version commit rejected on ${BRANCH} (is the bot a bypass actor of the ruleset?). Tagging ${head} instead: only the image carries ${version}."
+          git tag -f -a "$version" -m "${label} ${version}" "$head"
+          git push origin "refs/tags/${version}"
+          echo "### ${BRANCH} → \`${version}\` (tag only)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Merge the release back into develop
+        if: github.ref_name == 'main' && steps.release.outputs.version != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          if ! git ls-remote --exit-code --heads origin develop >/dev/null; then
+            echo "::notice::No develop branch"
+            exit 0
+          fi
+          git fetch -q origin develop
+
+          release="$(git rev-parse HEAD)"
+          source="$release"
+          message="chore(release): merge ${VERSION} into develop"
+          git switch -q -C develop origin/develop
+
+          merged=false
+          if git merge -q --no-ff -m "$message" "$source"; then
+            merged=true
+          else
+            git merge --abort 2>/dev/null || true
+
+            # Both branches changed the version lines: write the newest version
+            # (develop's beta or the release) on both sides, then merge again
+            develop_version="$(.github/scripts/version.sh current origin/develop)"
+            target="$VERSION"
+            if .github/scripts/version.sh newer "$develop_version" "$VERSION"; then
+              target="$develop_version"
+            fi
+
+            if [[ "$target" != "$VERSION" ]]; then
+              git switch -q --detach "$release"
+              .github/scripts/version.sh apply "$target"
+              git commit -qam "chore(release): keep ${target} on develop after ${VERSION}"
+              source="$(git rev-parse HEAD)"
+              git switch -q develop
+            elif [[ "$develop_version" != "$target" ]]; then
+              .github/scripts/version.sh apply "$target"
+              git commit -qam "chore(release): align develop with ${target}"
+            fi
+
+            if git merge -q --no-ff -m "$message" "$source"; then
+              merged=true
+            else
+              git merge --abort 2>/dev/null || true
+            fi
+          fi
+
+          if [[ "$merged" == "true" ]] && git push -q origin develop; then
+            echo "### ${VERSION} merged into develop" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Real conflicts (or develop moved meanwhile): leave it to a human
+          branch="bot/merge-${VERSION}-into-develop"
+          git push -q --force origin "${source}:refs/heads/${branch}"
+          url="$(gh pr create --base develop --head "$branch" \
+            --title "chore(release): merge ${VERSION} into develop" \
+            --body "Automatic merge of release \`${VERSION}\` into develop failed: please resolve the conflicts and merge.")"
+          echo "::warning::Could not merge ${VERSION} into develop automatically: ${url}"
+
+  alpha:
+    name: Alpha version
+    # Fork PRs get no secrets (and must not build with them): no alpha for them
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Bot token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.SCLOUD_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.SCLOUD_BOT_PRIVATE_KEY }}
+          permission-contents: write
+
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Tag the next alpha
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          user_id="$(gh api "/users/${APP_SLUG}[bot]" --jq .id)"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${user_id}+${APP_SLUG}[bot]@users.noreply.github.com"
+
+          # Several PRs can race for the same alpha number: retry with the next one
+          for attempt in 1 2 3 4 5; do
+            version="$(.github/scripts/version.sh next alpha)"
+            if [[ -z "$version" ]]; then
+              echo "::notice::This commit already has a version: no alpha"
+              exit 0
+            fi
+
+            git tag -a "$version" -m "Alpha ${version} (PR #${PR})"
+            if git push origin "refs/tags/${version}"; then
+              echo "### PR #${PR} → \`${version}\`" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+
+            git tag -d "$version"
+            sleep $(( attempt * 2 ))
+            git fetch --tags --force origin
+          done
+
+          echo "::error::Could not push an alpha tag after 5 attempts"
+          exit 1
