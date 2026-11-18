@@ -83,7 +83,7 @@ impl QuestionSection {
         buf: &[u8],
         offset: usize,
     ) -> Result<(QuestionSection, usize), SCloudException> {
-        let (q_name, mut pos) = parse_qname(buf, offset).unwrap();
+        let (q_name, mut pos) = parse_qname(buf, offset)?;
 
         if buf.len() < pos + 4 {
             return Err(SCloudException::SCLOUD_QUESTION_DESERIALIZATION_FAILED);
