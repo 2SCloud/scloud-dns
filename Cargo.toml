@@ -1,6 +1,6 @@
 [package]
 name = "scloud-dns"
-version = "0.3.2-beta.19"
+version = "0.3.2-beta.22"
 edition = "2024"
 
 [[bin]]
