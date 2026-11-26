@@ -98,7 +98,7 @@ impl AnswerSection {
         buf: &[u8],
         offset: usize,
     ) -> Result<(AnswerSection, usize), SCloudException> {
-        let (q_name, mut pos) = parse_qname(buf, offset).unwrap();
+        let (q_name, mut pos) = parse_qname(buf, offset)?;
 
         if pos + 10 > buf.len() {
             return Err(SCloudException::SCLOUD_IMPOSSIBLE_PARSE_ANSWER_HEADER_TOO_SHORT);

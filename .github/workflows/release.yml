@@ -2,10 +2,10 @@ name: Release
 
 # On a version tag (pushed by the Version workflow, by hand, or from a GitHub release):
 #   1. stamps the version and publishes ghcr.io/2scloud/scloud-dns:<tag>
-#   2. creates the GitHub release (pre-release for X.Y.Z-beta.N) if missing
+#   2. creates the GitHub release (pre-release for X.Y.Z-beta.<build number>) if missing
 #   3. notifies scloud-install, whose "Update stack" workflow opens the PR
 #      bumping scloud-dns in stack.yml (releases) / stack-beta.yml (betas)
-# Alphas (X.Y.Z-alpha.N, from pull requests) only get the image and a comment
+# Alphas (X.Y.Z-alpha.<build number>, from pull requests) only get the image and a comment
 # on their PR: no GitHub release, no scloud-install PR.
 #
 # Setup (org-level is easiest, shared with scloud-install):
