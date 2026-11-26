@@ -20,6 +20,12 @@ jobs:
       # .cargo/config.toml loses LLVM_PROFILE_FILE on recent Ubuntu runners, so
       # no coverage data (*.profraw) is written: run the test binaries directly.
       CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER: env
+      # Same on Windows: `Start-Process -Verb RunAs` starts each test binary in a
+      # separate elevated process, doesn't wait for it and doesn't pass it our
+      # environment, so the tests never report and no *.profraw is written (0 %).
+      CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUNNER: cmd /c
+      # llvm-cov matches against native paths, which use `\` on Windows.
+      COVERAGE_IGNORE_REGEX: 'src[\\/](main\.rs|bin[\\/]dns_stress_test\.rs)'
     strategy:
       fail-fast: false
       matrix:
@@ -51,10 +57,10 @@ jobs:
         run: |
           set -euo pipefail
           cargo llvm-cov \
-          --ignore-filename-regex "(src/main\.rs|src/bin/dns_stress_test\.rs)" \
+          --ignore-filename-regex "$COVERAGE_IGNORE_REGEX" \
           --json > coverage.json
           cargo llvm-cov \
-          --ignore-filename-regex "(src/main\.rs|src/bin/dns_stress_test\.rs)" \
+          --ignore-filename-regex "$COVERAGE_IGNORE_REGEX" \
           --html
 
       - name: Generate coverage badge (per OS)
@@ -64,12 +70,17 @@ jobs:
         run: |
           set -euo pipefail
           python - <<'PY'
-          import json, os
+          import json, os, sys
 
           with open("coverage.json", "r", encoding="utf-8") as f:
               data = json.load(f)
 
           totals = data["data"][0]["totals"]
+          if totals["lines"]["covered"] == 0:
+              sys.exit(
+                  "No line covered: the test binaries didn't write any coverage "
+                  "data (check the cargo runner for this OS)."
+              )
           line = float(totals["lines"]["percent"])
           func = float(totals["functions"]["percent"])
           region = float(totals["regions"]["percent"])
