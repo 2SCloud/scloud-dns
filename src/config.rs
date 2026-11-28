@@ -433,7 +433,7 @@ impl Default for ServerConfig {
     fn default() -> Self {
         ServerConfig {
             name: "scloud-dns".to_string(),
-            version: "none".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
             environment: "production".to_string(),
             max_concurrent_requests: 5000,
             graceful_shutdown_timeout_secs: 15,
@@ -491,6 +491,7 @@ pub struct LoggingConfig {
     pub dyn_ui: bool,
     pub rotate: bool,
     pub live_print: bool,
+    pub consumption: [bool; 2],
     pub max_size_mb: u64,
 }
 
@@ -503,6 +504,7 @@ impl Default for LoggingConfig {
             dyn_ui: false,
             rotate: true,
             live_print: false,
+            consumption: [false, false],
             max_size_mb: 200,
         }
     }

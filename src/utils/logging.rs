@@ -1,6 +1,7 @@
 use crate::config::{LogFormat, LogLevel, LoggingConfig};
 use crate::exceptions::SCloudException;
 use crate::utils::time::{format_system_time, now_epoch_ms};
+use crate::utils::uuid;
 
 use once_cell::sync::OnceCell;
 use serde_json::json;
@@ -22,7 +23,7 @@ pub struct OtelLog {
     pub target: String,
     pub severity: &'static str,
     pub message: String,
-    pub timestamp_unix_nano: String,
+    pub timestamp_unix_nano: String
 }
 
 pub static LOG_SENDER: OnceCell<mpsc::Sender<OtelLog>> = OnceCell::new();
@@ -33,12 +34,12 @@ pub fn build_otlp_payload(logs: &[OtelLog]) -> serde_json::Value {
         "resourceLogs": [{
             "resource": {
                 "attributes": [
-                    { "key": "service.name",        "value": { "stringValue": "scloud-dns" } },
-                    { "key": "service.instance.id", "value": { "stringValue": "scloud-dns-01" } }
+                    { "key": "service.name",        "value": { "stringValue": "scloud-dns" } }, // use server cfg name
+                    { "key": "service.instance.id", "value": { "stringValue": format!("scloud-dns-{}", uuid::generate_uuid()) } } // add & use server cfg instance name
                 ]
             },
             "scopeLogs": [{
-                "scope": { "name": "scloud.logger", "version": "0.2.2" },
+                "scope": { "name": "scloud.logger", "version": env!("CARGO_PKG_VERSION") },
                 "logRecords": logs.iter().map(|log| {
                     json!({
                         "timeUnixNano": log.timestamp_unix_nano,
@@ -89,7 +90,7 @@ pub fn log(level: LogLevel, target: &str, msg: &str) {
         return;
     }
 
-    if g.cfg.live_print {
+    if g.cfg.live_print && !g.cfg.consumption[0] {
         let now = SystemTime::now();
         println!(
             "[{}][{:?}][{}] - {}",
@@ -98,6 +99,12 @@ pub fn log(level: LogLevel, target: &str, msg: &str) {
             target,
             msg
         );
+    } else if g.cfg.live_print && g.cfg.consumption[0] && !g.cfg.consumption[1] {
+        eprintln!("`live_print` can't be activated while `consumption`");
+        g.cfg.consumption[1] = true;
+    } else if g.cfg.consumption[0] && !g.cfg.consumption[1] { // must check how to remove the second condition and refresh datas
+        println!("TODO: consumption stats");
+        g.cfg.consumption[1] = true;
     }
 
     if g.cfg.rotate {
@@ -228,9 +235,9 @@ macro_rules! __log_internal {
 }
 
 #[macro_export]
-macro_rules! log_trace {
+macro_rules! log_sdebug {
     ($($arg:tt)*) => {
-        $crate::__log_internal!($crate::config::LogLevel::TRACE, "TRACE", $($arg)*);
+        $crate::__log_internal!($crate::config::LogLevel::DEBUG, "SDEBUG", $($arg)*);
     };
 }
 
@@ -242,16 +249,16 @@ macro_rules! log_strace {
 }
 
 #[macro_export]
-macro_rules! log_debug {
+macro_rules! log_trace {
     ($($arg:tt)*) => {
-        $crate::__log_internal!($crate::config::LogLevel::DEBUG, "DEBUG", $($arg)*);
+        $crate::__log_internal!($crate::config::LogLevel::TRACE, "TRACE", $($arg)*);
     };
 }
 
 #[macro_export]
-macro_rules! log_sdebug {
+macro_rules! log_debug {
     ($($arg:tt)*) => {
-        $crate::__log_internal!($crate::config::LogLevel::DEBUG, "SDEBUG", $($arg)*);
+        $crate::__log_internal!($crate::config::LogLevel::DEBUG, "DEBUG", $($arg)*);
     };
 }
 
