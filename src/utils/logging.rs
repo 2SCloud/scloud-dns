@@ -1,6 +1,7 @@
 use crate::config::{LogFormat, LogLevel, LoggingConfig};
 use crate::exceptions::SCloudException;
 use crate::utils::time::{format_system_time, now_epoch_ms};
+use crate::log_warn;
 
 use once_cell::sync::OnceCell;
 use serde_json::json;
@@ -38,7 +39,7 @@ pub fn build_otlp_payload(logs: &[OtelLog]) -> serde_json::Value {
                 ]
             },
             "scopeLogs": [{
-                "scope": { "name": "scloud.logger", "version": "0.2.2" },
+                "scope": { "name": "scloud.logger", "version": env!("CARGO_PKG_VERSION") },
                 "logRecords": logs.iter().map(|log| {
                     json!({
                         "timeUnixNano": log.timestamp_unix_nano,
@@ -89,7 +90,7 @@ pub fn log(level: LogLevel, target: &str, msg: &str) {
         return;
     }
 
-    if g.cfg.live_print {
+    if g.cfg.live_print && !g.cfg.consumption {
         let now = SystemTime::now();
         println!(
             "[{}][{:?}][{}] - {}",
@@ -98,6 +99,8 @@ pub fn log(level: LogLevel, target: &str, msg: &str) {
             target,
             msg
         );
+    } else if g.cfg.live_print && g.cfg.consumption {
+        log_warn!("`live_print` can't be activated while `consumption`");
     }
 
     if g.cfg.rotate {
@@ -228,9 +231,9 @@ macro_rules! __log_internal {
 }
 
 #[macro_export]
-macro_rules! log_trace {
+macro_rules! log_sdebug {
     ($($arg:tt)*) => {
-        $crate::__log_internal!($crate::config::LogLevel::TRACE, "TRACE", $($arg)*);
+        $crate::__log_internal!($crate::config::LogLevel::DEBUG, "SDEBUG", $($arg)*);
     };
 }
 
@@ -242,16 +245,16 @@ macro_rules! log_strace {
 }
 
 #[macro_export]
-macro_rules! log_debug {
+macro_rules! log_trace {
     ($($arg:tt)*) => {
-        $crate::__log_internal!($crate::config::LogLevel::DEBUG, "DEBUG", $($arg)*);
+        $crate::__log_internal!($crate::config::LogLevel::TRACE, "TRACE", $($arg)*);
     };
 }
 
 #[macro_export]
-macro_rules! log_sdebug {
+macro_rules! log_debug {
     ($($arg:tt)*) => {
-        $crate::__log_internal!($crate::config::LogLevel::DEBUG, "SDEBUG", $($arg)*);
+        $crate::__log_internal!($crate::config::LogLevel::DEBUG, "DEBUG", $($arg)*);
     };
 }
 

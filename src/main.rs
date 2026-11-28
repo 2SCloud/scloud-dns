@@ -22,12 +22,12 @@ async fn main() -> Result<(), SCloudException> {
         println!(
             r#"
         ██████╗ ███████╗ ██████╗██╗      ██████╗ ██╗   ██╗██████╗
-        ╚════██╗██╔════╝██╔════╝██║     ██╔═══██╗██║   ██║██╔══██╗  scloud-dns (v0.2.3)
+        ╚════██╗██╔════╝██╔════╝██║     ██╔═══██╗██║   ██║██╔══██╗  {} {}
          █████╔╝███████╗██║     ██║     ██║   ██║██║   ██║██║  ██║      org: https://github.com/2SCloud/
         ██╔═══╝ ╚════██║██║     ██║     ██║   ██║██║   ██║██║  ██║      rep: https://github.com/2SCloud/scloud-dns
         ███████╗███████║╚██████╗███████╗╚██████╔╝╚██████╔╝██████╔╝      own: @onihilist
         ╚══════╝╚══════╝ ╚═════╝╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝
-        "#
+        "#, config.server.name, config.server.version
         );
     } else {
         ratatui::run(|terminal| ui::App::default().run(terminal));
