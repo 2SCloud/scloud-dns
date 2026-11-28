@@ -1,7 +1,7 @@
 use crate::config::{LogFormat, LogLevel, LoggingConfig};
 use crate::exceptions::SCloudException;
 use crate::utils::time::{format_system_time, now_epoch_ms};
-use crate::log_warn;
+use crate::utils::uuid;
 
 use once_cell::sync::OnceCell;
 use serde_json::json;
@@ -23,7 +23,7 @@ pub struct OtelLog {
     pub target: String,
     pub severity: &'static str,
     pub message: String,
-    pub timestamp_unix_nano: String,
+    pub timestamp_unix_nano: String
 }
 
 pub static LOG_SENDER: OnceCell<mpsc::Sender<OtelLog>> = OnceCell::new();
@@ -34,8 +34,8 @@ pub fn build_otlp_payload(logs: &[OtelLog]) -> serde_json::Value {
         "resourceLogs": [{
             "resource": {
                 "attributes": [
-                    { "key": "service.name",        "value": { "stringValue": "scloud-dns" } },
-                    { "key": "service.instance.id", "value": { "stringValue": "scloud-dns-01" } }
+                    { "key": "service.name",        "value": { "stringValue": "scloud-dns" } }, // use server cfg name
+                    { "key": "service.instance.id", "value": { "stringValue": format!("scloud-dns-{}", uuid::generate_uuid()) } } // add & use server cfg instance name
                 ]
             },
             "scopeLogs": [{
@@ -90,7 +90,7 @@ pub fn log(level: LogLevel, target: &str, msg: &str) {
         return;
     }
 
-    if g.cfg.live_print && !g.cfg.consumption {
+    if g.cfg.live_print && !g.cfg.consumption[0] {
         let now = SystemTime::now();
         println!(
             "[{}][{:?}][{}] - {}",
@@ -99,8 +99,12 @@ pub fn log(level: LogLevel, target: &str, msg: &str) {
             target,
             msg
         );
-    } else if g.cfg.live_print && g.cfg.consumption {
-        log_warn!("`live_print` can't be activated while `consumption`");
+    } else if g.cfg.live_print && g.cfg.consumption[0] && !g.cfg.consumption[1] {
+        eprintln!("`live_print` can't be activated while `consumption`");
+        g.cfg.consumption[1] = true;
+    } else if g.cfg.consumption[0] && !g.cfg.consumption[1] { // must check how to remove the second condition and refresh datas
+        println!("TODO: consumption stats");
+        g.cfg.consumption[1] = true;
     }
 
     if g.cfg.rotate {

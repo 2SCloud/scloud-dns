@@ -32,8 +32,8 @@
     "file": "/var/log/scloud-dns/scloud-dns.log",
     "dyn_ui": false,
     "rotate": true,
-    "live_print": true,
-    "consumption": true,
+    "live_print": false,
+    "consumption": [false, false],
     "max_size_mb": 200
   },
   "metrics": {

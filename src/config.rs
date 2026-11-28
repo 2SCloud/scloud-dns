@@ -491,7 +491,7 @@ pub struct LoggingConfig {
     pub dyn_ui: bool,
     pub rotate: bool,
     pub live_print: bool,
-    pub consumption: bool,
+    pub consumption: [bool; 2],
     pub max_size_mb: u64,
 }
 
@@ -504,7 +504,7 @@ impl Default for LoggingConfig {
             dyn_ui: false,
             rotate: true,
             live_print: false,
-            consumption: false,
+            consumption: [false, false],
             max_size_mb: 200,
         }
     }
